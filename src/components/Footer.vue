@@ -25,6 +25,12 @@
             {{ config.efua }}
           </a>
         </span>
+        <span class="o-hidden">
+          &amp;&nbsp;Forked&nbsp;from
+          <a href="https://github.com/q3cc/home" target="_blank">
+            Q3CC
+          </a>
+        </span>
         <!-- 站点备案 -->
         <span>
           <span v-if="siteIcp">
@@ -40,6 +46,13 @@
               {{ siteMps }}
             </a>
           </span>
+        </span>
+        <!-- 萌ICP备案（我都看见有导入了为什么删掉TAT） -->
+        <span v-if="moicpInfo">
+          &amp;
+          <a :href="moicpInfo.url" target="_blank">
+            {{ moicpInfo.display }}
+          </a>
         </span>
       </div>
       <div v-else class="lrc" @dblclick="toggleForceIcon">
@@ -135,6 +148,32 @@ const siteIcp = ref(import.meta.env.VITE_SITE_ICP);
 const siteMps = ref(import.meta.env.VITE_SITE_MPS);
 const siteMICP = ref(import.meta.env.VITE_SITE_MICP);
 const siteAuthor = ref(import.meta.env.VITE_SITE_AUTHOR);
+
+// 解析萌ICP备案号
+const parseMoicp = (moicp: string | null | undefined) => {
+  if (!moicp) return null;
+
+  // 支持多种格式：
+  // 萌ICP备20252028号、20252028号、20252028、萌ICP备 20252028 号
+  const match = moicp.match(/(\d{8})/);
+  if (match) {
+    return match[1]; // 返回纯数字编号
+  }
+  return null;
+};
+
+// 计算萌ICP信息
+const moicpInfo = computed(() => {
+  const moicpNumber = parseMoicp(siteMICP.value);
+  if (moicpNumber) {
+    return {
+      number: moicpNumber,
+      display: `萌ICP备${moicpNumber}号`,
+      url: `https://icp.gov.moe/?keyword=${moicpNumber}`
+    };
+  }
+  return null;
+});
 
 const siteUrl = computed(() => {
   const url = import.meta.env.VITE_SITE_URL;
@@ -252,6 +291,14 @@ watch(() => store.getPlayerLrc, (_new, _old) => {
 </script>
 
 <style lang="scss" scoped>
+@import url("https://fontsapi.zeoseven.com/92/main/result.css");
+
+// Footer 字体样式
+#footer {
+  font-family: "Smiley Sans Oblique";
+  font-weight: normal;
+}
+
 // 逐字模块1
 .dwrc-char {
   display: inline-block;

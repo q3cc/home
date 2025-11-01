@@ -12,6 +12,8 @@ import type { UserConfig } from "vite";
 // https://vitejs.dev/config/
 export default ({ mode }: { mode: string }): UserConfig => {
     const env = loadEnv(mode, process.cwd());
+    // 注入编译时间
+    env.VITE_BUILD_TIME = new Date().toISOString().split('T')[0];
     return defineConfig({
         plugins: [
             vue(),

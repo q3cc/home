@@ -1,8 +1,32 @@
 <template>
   <div class="more-content">
     <span class="greeting">
-      您可在此编写任意内容
+      字体版权信息
     </span>
+    <div class="font-info">
+      <div class="font-item">
+        <strong>寒蝉团圆体 Round</strong>
+        <a href="https://github.com/Warren2060/ChillReunion" target="_blank">GitHub</a>
+        <span>OFL-1.1</span>
+      </div>
+      <div class="font-item">
+        <strong>得意黑 Smiley Sans</strong>
+        <a href="https://atelier-anchor.com/typefaces/smiley-sans" target="_blank">官网</a>
+        <span>OFL-1.1</span>
+      </div>
+      <div class="font-item">
+        <strong>ZSFT-486 (Dancing Script)</strong>
+        <a href="https://github.com/google/fonts/tree/main/ofl/dancingscript" target="_blank">GitHub</a>
+        <a href="https://fonts.google.com/specimen/Dancing+Script" target="_blank">Google Fonts</a>
+        <span>OFL-1.1</span>
+      </div>
+      <div class="font-item">
+        <strong>MiSans</strong>
+        <a href="https://hyperos.mi.com/font/zh/" target="_blank">官网</a>
+        <a href="https://hyperos.mi.com/font-download/MiSans%E5%AD%97%E4%BD%93%E7%9F%A5%E8%AF%86%E4%BA%A7%E6%9D%83%E8%AE%B8%E5%8F%AF%E5%8D%8F%E8%AE%AE.pdf" target="_blank">许可协议</a>
+        <span>© Xiaomi Inc.</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -33,6 +57,49 @@ const store = mainStore();
     text-align: center;
     padding: 0 10px;
     color: var(--text-color);
+    margin-bottom: 20px;
+  }
+
+  .font-info {
+    width: 100%;
+    max-width: 600px;
+    padding: 0 20px;
+
+    .font-item {
+      margin-bottom: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+
+      strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-color);
+        font-size: 1rem;
+      }
+
+      a {
+        display: inline-block;
+        margin-right: 12px;
+        margin-bottom: 4px;
+        color: #4fc3f7;
+        text-decoration: none;
+        font-size: 0.9rem;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      span {
+        display: block;
+        margin-top: 6px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+    }
   }
 
 }

@@ -6,7 +6,7 @@ export const storeState: MainState = {
   // 这些变量，非有能力的开发者请只操作【开关】项来实现个性化的默认设置，其余变量勿动！
   imgLoadStatus: false, // 【状态】壁纸加载状态
   innerWidth: null as number | null, // 【状态】当前窗口宽度
-  coverType: 0 as number, // 【开关】壁纸种类
+  coverType: 1 as number, // 【开关】壁纸种类
   sBGCount: null as string | null, // 【状态】使用内置壁纸时用于临时指定壁纸的接口
   seasonalEffects: true, // 【开关】季节特效
   msgNameShow: false, // 【开关】信息区域显示自定义名而非原本的 URL
@@ -34,7 +34,7 @@ export const storeState: MainState = {
   playerAutoplay: true, // 【开关】是否自动播放
   playerLoop: "all", // 【开关】循环播放 "all", "one", "none"
   playerOrder: "random", // 【开关】循环顺序 "list", "random"
-  webSpeech: true, // 【开关】网页语音交互总开关（包含播报歌名功能）
+  webSpeech: false, // 【开关】网页语音交互总开关（包含播报歌名功能）
   playerSpeechName: true, // 【开关】播报歌名
   playerDWRCShow: true, // 【开关】逐字歌词解析总开关
   playerDWRCShowPro: true, // 【开关】逐字效果增强开关

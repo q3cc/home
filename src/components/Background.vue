@@ -123,11 +123,11 @@ const changeBg = async (type) => {
           };
         };
       } else if (type == 1) {
-        bgUrl.value = "https://api.dujin.org/bing/1920.php";
+        bgUrl.value = "https://t.alcy.cc/ysz";
       } else if (type == 2) {
-        bgUrl.value = "https://api.vvhan.com/api/wallpaper/views";
+        bgUrl.value = "https://t.alcy.cc/ysz";
       } else if (type == 3) {
-        bgUrl.value = "https://api.vvhan.com/api/wallpaper/acg";
+        bgUrl.value = "https://t.alcy.cc/ysz";
       };
     } finally {
       isLoading.value = false;

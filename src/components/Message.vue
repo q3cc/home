@@ -18,7 +18,7 @@
         <Transition name="fade" mode="out-in">
           <div :key="descriptionText.hello + descriptionText.text" class="text">
             <p>{{ descriptionText.hello }}</p>
-            <p>{{ descriptionText.text }}</p>
+            <p v-html="descriptionText.text.replace(/\n/g, '<br>')"></p>
           </div>
         </Transition>
         <Icon size="16">
@@ -59,11 +59,23 @@ const siteUrl = computed(() => {
   return hostname.split(".");
 });
 
+// 获取编译时间
+const getBuildTime = () => {
+  const buildTime = (import.meta.env as any).VITE_BUILD_TIME || new Date().toISOString().split('T')[0];
+  return buildTime;
+};
+
 // 简介区域文字
 const descriptionText = reactive({
   hello: import.meta.env.VITE_DESC_HELLO,
   text: import.meta.env.VITE_DESC_TEXT,
 });
+
+// 添加编译时间到文本
+const addBuildTime = (text: string) => {
+  const buildTime = getBuildTime();
+  return `${text}\n最近一次更新 ${buildTime}`;
+};
 
 // 切换右侧功能区
 const changeBox = () => {
@@ -93,7 +105,7 @@ watch(
   (value) => {
     if (value) {
       descriptionText.hello = import.meta.env.VITE_DESC_HELLO_OTHER;
-      descriptionText.text = import.meta.env.VITE_DESC_TEXT_OTHER;
+      descriptionText.text = addBuildTime(import.meta.env.VITE_DESC_TEXT_OTHER);
       if (store.webSpeech) {
         stopSpeech();
         const voice = import.meta.env.VITE_TTS_Voice;
@@ -110,7 +122,15 @@ watch(
 
 
 <style lang="scss" scoped>
+@import url("https://fontsapi.zeoseven.com/486/main/result.css");
+
 .message {
+  // Hello 文本特殊字体
+  .description .text p:first-child {
+    font-family: "ZSFT-486";
+    font-weight: normal;
+  }
+
   .logo {
     display: flex;
     flex-direction: row;
