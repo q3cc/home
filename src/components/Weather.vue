@@ -306,13 +306,15 @@ const getWeatherData = async () => {
   try {
     // 获取地理位置信息
     if (!gdkey && !txkey) {
-      console.log("未配置天气接口密钥，使用备用天气接口");
+      console.log("未配置天气接口密钥，默认使用小米天气接口");
       try {
         await getXMW();
       } catch (error) {
+        console.error("小米天气接口获取失败，尝试使用和风天气接口");
         try {
           await getHXHW();
         } catch (error) {
+          console.error("和风天气接口获取失败，使用其他备用接口");
           await getOW();
         };
       };

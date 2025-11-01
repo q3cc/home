@@ -70,3 +70,48 @@ const setupset = () => setTimeout(() => {
 }, 300);
 
 setupset();
+
+// 添加控制台清理命令
+window.clearStorage = function() {
+  console.log('正在清理用户设置的持久化存储和缓存...');
+
+  // 清理 localStorage
+  const localStorageKeys = Object.keys(localStorage);
+  localStorageKeys.forEach(key => {
+    if (key.startsWith('main-')) {
+      localStorage.removeItem(key);
+      console.log(`已清理 localStorage: ${key}`);
+    }
+  });
+
+  // 清理 sessionStorage
+  const sessionStorageKeys = Object.keys(sessionStorage);
+  sessionStorageKeys.forEach(key => {
+    if (key.startsWith('main-')) {
+      sessionStorage.removeItem(key);
+      console.log(`已清理 sessionStorage: ${key}`);
+    }
+  });
+
+  // 清理其他可能的缓存
+  if ('caches' in window) {
+    caches.keys().then(cacheNames => {
+      cacheNames.forEach(cacheName => {
+        caches.delete(cacheName);
+        console.log(`已清理缓存: ${cacheName}`);
+      });
+    });
+  }
+
+  console.log('存储清理完成！页面将在 2 秒后刷新以应用更改...');
+
+  // 刷新页面以重置状态
+  setTimeout(() => {
+    window.location.href = window.location.pathname;
+  }, 2000);
+};
+
+// 添加简短别名
+window.clear = window.clearStorage;
+
+console.log('控制台命令已添加：使用 clear() 或 clearStorage() 清理用户设置的持久化存储和缓存');
