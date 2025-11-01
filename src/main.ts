@@ -72,7 +72,7 @@ const setupset = () => setTimeout(() => {
 setupset();
 
 // 添加控制台清理命令
-window.clearStorage = function() {
+(window as any).clearStorage = function() {
   console.log('正在清理用户设置的持久化存储和缓存...');
 
   // 清理 localStorage
@@ -112,6 +112,6 @@ window.clearStorage = function() {
 };
 
 // 添加简短别名
-window.clear = window.clearStorage;
+(window as any).userclear = (window as any).clearStorage;
 
-console.log('控制台命令已添加：使用 clear() 或 clearStorage() 清理用户设置的持久化存储和缓存');
+console.log('控制台命令已添加：使用 userclear() 或 clearStorage() 清理用户设置的持久化存储和缓存');
