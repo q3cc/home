@@ -102,6 +102,29 @@ const store = mainStore();
     }
   }
 
+  @media (max-width: 560px) {
+    .font-info {
+      padding: 0 10px;
+
+      .font-item {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .font-item::-webkit-scrollbar {
+        display: none;
+      }
+
+      .font-item strong,
+      .font-item a,
+      .font-item span {
+        white-space: nowrap;
+      }
+    }
+  }
+
 }
 </style>
 
