@@ -2,24 +2,83 @@
 import fetchJsonp from "fetch-jsonp";
 import { gwg } from "@/utils/authServer";
 
+const REQUEST_TIMEOUT = 8000;
+const JSONP_TIMEOUT = 8000;
+
+const fetchWithTimeout = async (
+  url: string,
+  init: RequestInit = {},
+  timeout = REQUEST_TIMEOUT,
+) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const fetchJson = async <T = any>(
+  url: string,
+  init: RequestInit = {},
+  timeout = REQUEST_TIMEOUT,
+): Promise<T> => {
+  const response = await fetchWithTimeout(url, init, timeout);
+  if (!response.ok) {
+    throw new Error(`请求失败: ${response.status}`);
+  }
+  return (await response.json()) as T;
+};
+
 /**
  * JSONP 请求模块
  */
 // JSONP 请求函数，并返回 JSON 【关于为什么要有这个呢...请腾讯自觉扫一下（x）】
-const loadJSONP = (url, callbackName) => {
+const loadJSONP = (
+  url: string,
+  callbackName: string,
+  timeout = JSONP_TIMEOUT,
+) => {
   return new Promise((resolve, reject) => {
-    // 定义 JSONP 回调函数
-    (window as any)[callbackName] = (data: any) => {
-      resolve(data); // 解析 JSON 数据
-      delete (window as any)[callbackName]; // 清理全局变量，防止污染
-    };
     // 创建 script 标签
     const script = document.createElement('script');
+    script.async = true;
+    let settled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+      delete (window as any)[callbackName];
+    };
+    // 定义 JSONP 回调函数
+    (window as any)[callbackName] = (data: any) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(data); // 解析 JSON 数据
+    };
     script.src = url;
     script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       reject(new Error('JSONP 请求失败'));
-      delete (window as any)[callbackName]; // 出错时也要清理
     };
+    timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error("JSONP 请求超时"));
+    }, timeout);
     document.body.appendChild(script);
   });
 };
@@ -30,62 +89,60 @@ const loadJSONP = (url, callbackName) => {
 
 // 获取音乐播放列表
 export const getPlayerList = async (server, type, id, serverse, idse) => {
-  let dataf: any[] = [], data3: any[] = [], data1: any[] = [], data2: any[] = [];
-  if (serverse != null && idse != null) {
+  const ensureArray = (data: any) => (Array.isArray(data) ? data : []);
+  const normalizeSong = (item: any, overrideUrl?: string) => ({
+    name: item.name || item.title,
+    artist: item.artist || item.author,
+    album: item.album || import.meta.env.VITE_SITE_NAME,
+    url: overrideUrl ?? item.url,
+    cover: item.cover || item.pic,
+    lrc: item.lrc,
+  });
+  const safeFetchJson = async (url: string, label: string) => {
     try {
-      const res1 = await fetch(
-        `${import.meta.env.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
-      );
-      data1 = await res1.json();
+      const data = await fetchJson(url);
+      return ensureArray(data);
     } catch (e) {
-      data1 = [];
-      console.error("音乐源 1 请求失败:", e);
-    };
-    try {
-      const res2 = await fetch(
-        `${import.meta.env.VITE_SONG_API}?server=${serverse}&type=${type}&id=${idse}`,
-      );
-      data2 = await res2.json();
-    } catch (e) {
-      data2 = [];
-      console.error("音乐源 2 请求失败:", e);
-    };
-    dataf = [...data2 || [], ...data1 || []];
-  } else {
-    try {
-      const res1 = await fetch(
-        `${import.meta.env.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
-      );
-      data3 = await res1.json();
-    } catch (e) {
-      data3 = [];
-      console.error("音乐源 1 请求失败:", e);
-    };
-    dataf = [...data3 || []];
+      console.error(`${label} 请求失败:`, e);
+      return [];
+    }
   };
-  const data = dataf;
+  let dataf: any[] = [];
+  if (serverse != null && idse != null) {
+    const [data1, data2] = await Promise.all([
+      safeFetchJson(
+        `${import.meta.env.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
+        "音乐源 1",
+      ),
+      safeFetchJson(
+        `${import.meta.env.VITE_SONG_API}?server=${serverse}&type=${type}&id=${idse}`,
+        "音乐源 2",
+      ),
+    ]);
+    dataf = [...data2, ...data1];
+  } else {
+    const data = await safeFetchJson(
+      `${import.meta.env.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
+      "音乐源 1",
+    );
+    dataf = [...data];
+  };
+  const data = ensureArray(dataf);
   if (data.length > 0 && data[0]?.url?.startsWith("@")) {
-    const [handle, jsonpCallback, jsonpCallbackFunction, url] = data[0].url.split("@").slice(1);
-    const jsonpData = await fetchJsonp(url).then((res) => res.json());
+    const [, , , url] = data[0].url.split("@").slice(1);
+    if (!url) return data.map((v) => normalizeSong(v));
+    let jsonpData: any = null;
+    try {
+      jsonpData = await fetchJsonp(url).then((res) => res.json());
+    } catch (error) {
+      console.error("QQ 音乐 JSONP 请求失败:", error);
+      return data.map((v) => normalizeSong(v));
+    }
     const sipList = jsonpData.req_0?.data?.sip || [];
     const domain = (sipList.find((i: string) => !i.startsWith("http://ws")) || sipList[0] || "").replace("http://", "https://");
-    return data.map((v, i) => ({
-      name: v.name || v.title,
-      artist: v.artist || v.author,
-      album: v.album || import.meta.env.VITE_SITE_NAME,
-      url: domain + (jsonpData.req_0?.data?.midurlinfo[i]?.purl || ""),
-      cover: v.cover || v.pic,
-      lrc: v.lrc,
-    }));
+    return data.map((v, i) => normalizeSong(v, domain + (jsonpData.req_0?.data?.midurlinfo[i]?.purl || "")));
   } else {
-    return data.map((v) => ({
-      name: v.name || v.title,
-      artist: v.artist || v.author,
-      album: v.album || import.meta.env.VITE_SITE_NAME,   // 没办法，Netease 的 SONG 接口压根不返回专辑名，搜索接口倒是有...
-      url: v.url,
-      cover: v.cover || v.pic,
-      lrc: v.lrc,
-    }));
+    return data.map((v) => normalizeSong(v));
   }
 };
 
@@ -95,8 +152,7 @@ export const getPlayerList = async (server, type, id, serverse, idse) => {
 
 // 获取一言数据
 export const getHitokoto = async () => {
-  const res = await fetch("https://v1.hitokoto.cn");
-  return await res.json();
+  return await fetchJson("https://v1.hitokoto.cn");
 };
 
 /**
@@ -135,47 +191,40 @@ export const getTXWeatherS = async (key, adcode, skey) => {
 
 // 获取高德地理位置信息
 export const getGDAdcode = async (key) => {
-  const res = await fetch(`https://restapi.amap.com/v3/ip?key=${key}`);
-  return await res.json();
+  return await fetchJson(`https://restapi.amap.com/v3/ip?key=${key}`);
 };
 
 // 获取高德地理位置信息（带IP）
 export const getGDAdcodeI = async (ipv4, key) => {
-  const res = await fetch(`https://restapi.amap.com/v3/ip?ip=${ipv4}&key=${key}`);
-  return await res.json();
+  return await fetchJson(`https://restapi.amap.com/v3/ip?ip=${ipv4}&key=${key}`);
 };
 
 // 获取高德地理天气信息
 export const getGDWeather = async (key, city) => {
-  const res = await fetch(`https://restapi.amap.com/v3/weather/weatherInfo?key=${key}&city=${city}`);
-  return await res.json();
+  return await fetchJson(`https://restapi.amap.com/v3/weather/weatherInfo?key=${key}&city=${city}`);
 };
 
 // 补充的获取 IPV4 地址的 API
 export const getIPV4Addr = async () => {
-  const res = await fetch(`https://v4.yinghualuo.cn/bejson?format=json`);
-  return await res.json();
+  return await fetchJson(`https://v4.yinghualuo.cn/bejson?format=json`);
 };
 
 // 补充的获取 IPV6 地址的 API
 export const getIPV6Addr = async () => {
-  const res = await fetch(`https://v6.yinghualuo.cn/bejson?format=json`);
-  return await res.json();
+  return await fetchJson(`https://v6.yinghualuo.cn/bejson?format=json`);
 };
 
 // 免 KEY 区域
 // 强烈建议自己注册腾讯或高德的 API
 // 获取韩小韩天气 API
 export const getHXHWeather = async () => {
-  const res = await fetch("https://api.vvhan.com/api/weather");
-  return await res.json();
+  return await fetchJson("https://api.vvhan.com/api/weather");
 };
 
 // 获取教书先生天气 API
 // https://api.oioweb.cn/doc/weather/GetWeather
 export const getOtherWeather = async () => {
-  const res = await fetch("https://api.oioweb.cn/api/weather/GetWeather");
-  return await res.json();
+  return await fetchJson("https://api.oioweb.cn/api/weather/GetWeather");
 };
 
 // ------
@@ -185,15 +234,13 @@ export const getOtherWeather = async () => {
 // 获取小米天气 API
 export const getXMWeather = async (city) => {
   // const res = await fetch(`https://weatherapi.market.xiaomi.com/wtr-v3/weather/all?latitude=0&longitude=0&isLocated=true&locationKey=weathercn%3A${city}&days=2&appKey=weather20151024&sign=zUFJoAR2ZVrDy1vF3D07&locale=zh_cn&alpha=false&isGlobal=false`);
-  const res = await fetch(`https://api.nanorocky.top/xmw/?city=weathercn%3A${city}`);
-  return await res.json();
+  return await fetchJson(`https://api.nanorocky.top/xmw/?city=weathercn%3A${city}`);
 };
 
 // 获取 IPV4 地址的地理位置信息 API
 export const getIPV4AddrLocation = async (ipv4) => {
   // const res = await fetch(`https://ip.taobao.com/outGetIpInfo?ip=${ipv4}&accessKey=alibaba-inc`);
-  const res = await fetch(`https://api.nanorocky.top/tbipinfo/?ip=${ipv4}`);
-  return await res.json();
+  return await fetchJson(`https://api.nanorocky.top/tbipinfo/?ip=${ipv4}`);
 };
 
 // ------
@@ -203,21 +250,16 @@ export const getIPV4AddrLocation = async (ipv4) => {
  */
 export const testGitHubConnectivity = async (): Promise<number> => {
   const testUrl = 'https://raw.githubusercontent.com/NanoRocky/home/blob/EFU/public/images/icon/github.png';
-  const timeout = 3000;
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    const response = await fetch(testUrl, {
+    const response = await fetchWithTimeout(testUrl, {
       method: 'HEAD',
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+    }, 3000);
     if (response.ok) {
       return 1;
     } else {
       return 0;
     }
-  } catch (error) {
+  } catch {
     return 0;
   }
 };

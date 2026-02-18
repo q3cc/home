@@ -1,4 +1,3 @@
-import { parseVersion } from "@/utils/ver";
 import config from "@/../package.json";
 
 // 这是一个“飞屋”模块，用于检测是否存在新版本。由于酪灰懒的一批，这个一点儿都不重要的模块由 AI 全权负责（？），酪灰只是瞅了几眼，就睡着了。所以有 BUG 记得用 issue 轰炸他！

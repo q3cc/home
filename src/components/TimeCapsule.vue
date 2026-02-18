@@ -40,10 +40,12 @@ const startDateText = ref<string | null>(null);
 const timeInterval = ref<number | null>(null);
 
 onMounted(() => {
-  timeInterval.value = window.setInterval(() => {
+  const updateTimeCapsule = () => {
     timeData.value = getTimeCapsule();
     if (startDate.value) startDateText.value = siteDateStatistics(new Date(startDate.value));
-  }, 1000);
+  };
+  updateTimeCapsule();
+  timeInterval.value = window.setInterval(updateTimeCapsule, 60000);
 });
 
 onBeforeUnmount(() => {

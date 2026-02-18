@@ -8,6 +8,12 @@ let timeoutId: NodeJS.Timeout | null = null;
 let speechapiUrlS: string | null = null;
 let audioUrlS: string | null = null;
 
+const revokeObjectUrl = (url?: string | null) => {
+  if (url && url.startsWith("blob:")) {
+    URL.revokeObjectURL(url);
+  }
+};
+
 /**
  * Speech
  * Made by NanoRocky
@@ -108,7 +114,7 @@ export function Speech(
 
 function playNext(
   resolve: () => void,
-  reject: (reason?: any) => void
+  reject: any
 ) {
   if (audioQueue.length === 0) {
     isPlaying = false;
@@ -133,12 +139,14 @@ function playNext(
 
   // 在音频播放结束时解析 Promise
   audio.onended = () => {
+    revokeObjectUrl(nextAudioUrl);
     resolve();
     playNext(resolve, reject);
   };
 
   // 如果发生错误，拒绝 Promise
   audio.onerror = (error) => {
+    revokeObjectUrl(nextAudioUrl);
     reject(error);
     playNext(resolve, reject);
   };
@@ -152,9 +160,11 @@ function playNext(
  */
 export function stopSpeech() {
   if (currentAudio) {
+    revokeObjectUrl(currentAudio.src);
     currentAudio.pause();
     currentAudio = null;
   };
+  audioQueue.forEach((url) => revokeObjectUrl(url));
   audioQueue = [];
   isPlaying = false;
   if (controller) {
@@ -229,7 +239,7 @@ export function SpeechLocal(
 
 function playNextLocal(
   resolve: () => void,
-  reject: (reason?: any) => void
+  reject: any
 ) {
   if (audioQueue.length === 0) {
     isPlaying = false;

@@ -53,9 +53,9 @@ export default ({ mode }: { mode: string }): UserConfig => {
                     ],
                 },
                 manifest: {
-                    name: loadEnv(mode, process.cwd()).VITE_SITE_NAME,
-                    short_name: loadEnv(mode, process.cwd()).VITE_SITE_NAME,
-                    description: loadEnv(mode, process.cwd()).VITE_SITE_DES,
+                    name: env.VITE_SITE_NAME,
+                    short_name: env.VITE_SITE_NAME,
+                    description: env.VITE_SITE_DES,
                     display: "standalone",
                     start_url: "/",
                     theme_color: "#424242",
@@ -134,14 +134,20 @@ export default ({ mode }: { mode: string }): UserConfig => {
             rollupOptions: {
                 output: {
                     manualChunks(id) {
-                        if (id.includes('node_modules')) {
-                            return 'vendor';
-                        };
                         if (id.includes('xiaomi_weather_adcode.json') || id.includes('xiaomi_weather_status.json')) {
                             return 'xiaomi_weather_data';
                         };
                         if (id.includes('siteLinks.json') || id.includes('socialLinks.json')) {
                             return 'custom_data';
+                        };
+                        if (id.includes('node_modules')) {
+                            if (id.includes('element-plus')) return 'element-plus';
+                            if (id.includes('swiper')) return 'swiper';
+                            if (id.includes('three')) return 'three';
+                            if (id.includes('aplayer')) return 'aplayer';
+                            if (id.includes('@icon-park') || id.includes('@vicons')) return 'icons';
+                            if (id.includes('pinia')) return 'pinia';
+                            return 'vendor';
                         };
                     }
                 }

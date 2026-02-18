@@ -1,8 +1,10 @@
 import { mainStore } from "@/store";
+import { detectDeviceType } from "@/utils/device";
 let animationFrameId: number | null = null;
-let intervalId: ReturnType<typeof setInterval> | null = null;
 let canvas: HTMLCanvasElement | null = null;
 let fireflyCount: number = 0;
+let lastFrameTime = 0;
+const targetFrameInterval = 1000 / 30;
 const fireflies: {
   x: number;
   y: number;
@@ -37,7 +39,7 @@ const createCanvas = () => {
 const initFirefly = () => {
   const store = mainStore();
   store.showFirefly = true;
-  if (animationFrameId || intervalId) {
+  if (animationFrameId) {
     closeFirefly();
   };
   createCanvas();
@@ -45,7 +47,7 @@ const initFirefly = () => {
   if (!ctx || !canvas) return;
   const createFireflies = () => {
     fireflies.length = 0;
-    const deviceType = detectDevice();
+    const deviceType = detectDeviceType();
     if (deviceType === 'mobile') {
       fireflyCount = 24;
     } else {
@@ -88,47 +90,26 @@ const initFirefly = () => {
     });
   };
 
-  const updateFireflies = () => {
-    drawFireflies();
+  const updateFireflies = (timestamp?: number) => {
+    const now = timestamp ?? performance.now();
+    if (now - lastFrameTime >= targetFrameInterval) {
+      lastFrameTime = now;
+      drawFireflies();
+    }
     animationFrameId = requestAnimationFrame(updateFireflies);
   };
 
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
   createFireflies();
+  lastFrameTime = 0;
   updateFireflies();
-
-  intervalId = setInterval(() => {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
-      updateFireflies();
-    }
-  }, 1000 / 30);
-};
-
-// 检测设备类型
-const detectDevice = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
-  if (/mobile|android|iphone|ipad|ipod|windows phone/.test(userAgent)) {
-    if (/ipad|tablet|playbook|silk|kindle/.test(userAgent)) {
-      return 'tablet'; // 平板
-    } else {
-      return 'mobile'; // 手机
-    };
-  } else {
-    return 'pc'; // PC
-  };
 };
 
 const closeFirefly = () => {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
-  };
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
   };
   if (canvas && canvas.parentNode === document.body) {
     document.body.removeChild(canvas);

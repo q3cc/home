@@ -20,6 +20,7 @@ import { initFirefly, closeFirefly } from "@/utils/season/firefly";
 import { initLantern, closeLantern } from "@/utils/season/lantern";
 import { ref, h } from 'vue';
 import { gasC } from "@/utils/authServer";
+import { detectDeviceType } from "@/utils/device";
 
 
 const store = mainStore();
@@ -36,23 +37,35 @@ let bgImageCount = 10; // PC 版壁纸
 let bgImageCountP = 2; // 移动版壁纸
 let bgRandom = 0;
 let bgRandomp = 0;
-let confUrlS = null;
 let sest = 0;
 let sBGCountN = null;
+let configCache = null;
+let configPromise = null;
 
 // 加载 config.json
 async function loadConfig() {
-  try {
-    if (key) {
+  if (configCache) {
+    bgImageCount = configCache.bgImageCount;
+    bgImageCountP = configCache.bgImageCountP;
+    return true;
+  }
+  if (!configPromise) {
+    configPromise = (async () => {
       const confUrl = "/images/config.json";
-      confUrlS = await gasC(confUrl, key);
-    } else {
-      confUrlS = "/images/config.json";
-    };
-    const response = await fetch(confUrlS);
-    const data = await response.json();
-    bgImageCount = Math.max(data.bgImageCount, 1);
-    bgImageCountP = Math.max(data.bgImageCountP, 1);
+      const configUrl = key ? await gasC(confUrl, key) : confUrl;
+      const response = await fetch(configUrl);
+      const data = await response.json();
+      return {
+        bgImageCount: Math.max(data.bgImageCount, 1),
+        bgImageCountP: Math.max(data.bgImageCountP, 1),
+      };
+    })();
+  }
+  try {
+    const data = await configPromise;
+    configCache = data;
+    bgImageCount = data.bgImageCount;
+    bgImageCountP = data.bgImageCountP;
     if (sBGCountN != null && sBGCountN <= bgImageCount && sBGCountN > 0) {
       bgRandom = sBGCountN;
       bgRandomp = sBGCountN;
@@ -70,20 +83,8 @@ async function loadConfig() {
     bgRandomp = Math.floor(Math.random() * bgImageCountP + 1);
     sBGCountN = null;
     return true;
-  };
-};
-
-// 检测设备类型
-const detectDevice = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
-  if (/mobile|android|iphone|ipad|ipod|windows phone/.test(userAgent)) {
-    if (/ipad|tablet|playbook|silk|kindle/.test(userAgent)) {
-      return 'tablet'; // 平板
-    } else {
-      return 'mobile'; // 手机
-    };
-  } else {
-    return 'pc'; // PC
+  } finally {
+    configPromise = null;
   };
 };
 
@@ -94,7 +95,7 @@ const changeBg = async (type) => {
   (async () => {
     try {
       const configLoaded = await loadConfig();
-      const deviceType = await detectDevice();
+      const deviceType = detectDeviceType();
       if (!configLoaded) return;
       if (type == 0) {
         // 这里指定了所有自定义背景的文件格式，必须统一。可以自定义修改，比如 webp 或 png

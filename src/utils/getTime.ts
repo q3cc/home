@@ -1,6 +1,6 @@
 import { h } from "vue";
 import { SpaCandle } from "@icon-park/vue-next";
-import { Speech, stopSpeech, SpeechLocal } from "@/utils/speech";
+import { stopSpeech, SpeechLocal } from "@/utils/speech";
 import dayjs from "dayjs";
 
 // 时钟

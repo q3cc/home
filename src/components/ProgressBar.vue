@@ -25,10 +25,12 @@ const store = mainStore();
 const isSeeking = ref(false);
 const audio = ref<HTMLAudioElement | null>(null);
 const icon = ref<HTMLElement | null>(null);
+const progressBarEl = ref<HTMLElement | null>(null);
 const touchIdentifier = ref<number | null>(null);
 const isDragging = ref(false);
 const dragProgress = ref(0);
 let dragTimer: ReturnType<typeof setTimeout> | null = null;
+let footerEl: HTMLElement | null = null;
 
 // 进度计算
 const progressBarWidth = computed(() => {
@@ -58,8 +60,8 @@ const handleMouseLeave = () => {
 const handleMouseDown = (e: MouseEvent) => {
     isDragging.value = true;
     isSeeking.value = true;
-    const progressBar = document.querySelector('.progress-bar');
-    const rect = progressBar!.getBoundingClientRect();
+    const rect = progressBarEl.value?.getBoundingClientRect();
+    if (!rect) return;
     const initialX = e.clientX - rect.left;
     dragProgress.value = (initialX / rect.width) * 100;
 };
@@ -79,8 +81,8 @@ const onMouseUp = () => {
 
 const onMouseMove = throttle((e: MouseEvent) => {
     if (!isDragging.value) return;
-    const progressBar = document.querySelector('.progress-bar');
-    const rect = progressBar!.getBoundingClientRect();
+    const rect = progressBarEl.value?.getBoundingClientRect();
+    if (!rect) return;
     let offsetX = e.clientX - rect.left;
     offsetX = Math.max(0, Math.min(rect.width, offsetX));
     dragProgress.value = (offsetX / rect.width) * 100;
@@ -96,8 +98,8 @@ const handleTouchStart = (e: TouchEvent) => {
     isDragging.value = true;
     isSeeking.value = true;
     touchIdentifier.value = e.touches[0].identifier;
-    const progressBar = document.querySelector('.progress-bar');
-    const rect = progressBar!.getBoundingClientRect();
+    const rect = progressBarEl.value?.getBoundingClientRect();
+    if (!rect) return;
     const initialX = e.touches[0].clientX - rect.left;
     dragProgress.value = (initialX / rect.width) * 100;
 };
@@ -107,8 +109,8 @@ const onTouchMove = throttle((e: TouchEvent) => {
     const touch = Array.from(e.touches).find(t => t.identifier === touchIdentifier.value);
     if (!touch) return;
     e.preventDefault();
-    const progressBar = document.querySelector('.progress-bar');
-    const rect = progressBar!.getBoundingClientRect();
+    const rect = progressBarEl.value?.getBoundingClientRect();
+    if (!rect) return;
     let offsetX = touch.clientX - rect.left;
     offsetX = Math.max(0, Math.min(rect.width, offsetX));
     dragProgress.value = (offsetX / rect.width) * 100;
@@ -150,19 +152,29 @@ watch(() => store.forceShowBarIcon, (value) => {
 
 onMounted(() => nextTick(() => {
     audio.value = document.querySelector('audio');
-    const progressBarShowCheck = document.querySelector('#footer');
-    if (progressBarShowCheck) {
-        progressBarShowCheck.addEventListener('mouseenter', handleMouseEnter);
-        progressBarShowCheck.addEventListener('mouseleave', handleMouseLeave);
+    progressBarEl.value = document.querySelector('.progress-bar');
+    footerEl = document.querySelector('#footer');
+    if (footerEl) {
+        footerEl.addEventListener('mouseenter', handleMouseEnter);
+        footerEl.addEventListener('mouseleave', handleMouseLeave);
     };
     document.addEventListener('mouseup', onMouseUp);
     document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener("touchmove", onTouchMove);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd);
     document.addEventListener('touchcancel', onTouchEnd);
 }));
 
 onBeforeUnmount(() => {
+    if (footerEl) {
+        footerEl.removeEventListener('mouseenter', handleMouseEnter);
+        footerEl.removeEventListener('mouseleave', handleMouseLeave);
+        footerEl = null;
+    };
+    if (dragTimer) {
+        clearTimeout(dragTimer);
+        dragTimer = null;
+    };
     document.removeEventListener('mouseup', onMouseUp);
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener("touchmove", onTouchMove);

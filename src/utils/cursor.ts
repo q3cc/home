@@ -1,5 +1,3 @@
-import { isEqual } from "lodash-es";
-
 let mainCursor: Cursor | null = null;
 
 const lerp = (a: number, b: number, n: number) => {
@@ -7,15 +5,6 @@ const lerp = (a: number, b: number, n: number) => {
     return b;
   }
   return (1 - n) * a + n * b;
-};
-
-const getStyle = (el: HTMLElement, attr: string) => {
-  try {
-    return window.getComputedStyle ? window.getComputedStyle(el)[attr as any] : (el as any).currentStyle[attr];
-  } catch (e) {
-    console.error(e);
-  }
-  return false;
 };
 
 const cursorInit = () => {
@@ -28,7 +17,6 @@ class Cursor {
     curr: { x: number; y: number } | null;
     prev: { x: number; y: number } | null;
   };
-  pt: string[];
   cursor: HTMLDivElement | null = null;
   scr: HTMLStyleElement | null = null;
 
@@ -37,7 +25,6 @@ class Cursor {
       curr: null,
       prev: null,
     };
-    this.pt = [];
     this.create();
     this.init();
     this.render();
@@ -57,13 +44,6 @@ class Cursor {
       this.cursor.classList.add("hidden");
       document.body.append(this.cursor);
     }
-
-    const el = document.getElementsByTagName("*");
-    for (let i = 0; i < el.length; i++) {
-      if (getStyle(el[i] as HTMLElement, "cursor") === "pointer") {
-        this.pt.push(el[i].outerHTML);
-      };
-    };
     this.scr = document.createElement("style");
     document.body.appendChild(this.scr);
     this.scr.innerHTML = `* {cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' width='10px' height='10px'><circle cx='4' cy='4' r='4' fill='white' /></svg>") 4 4, auto !important}`;
@@ -79,8 +59,6 @@ class Cursor {
       curr: null,
       prev: null,
     };
-    this.pt = [];
-
     this.create();
     this.init();
     this.render();
@@ -123,7 +101,11 @@ class Cursor {
     } else if (this.pos.curr) {
       this.pos.prev = this.pos.curr;
     }
-    if (this.pos.prev && this.pos.curr && !isEqual(this.pos.curr, this.pos.prev)) {
+    if (
+      this.pos.prev &&
+      this.pos.curr &&
+      (this.pos.curr.x !== this.pos.prev.x || this.pos.curr.y !== this.pos.prev.y)
+    ) {
       requestAnimationFrame(() => this.render());
     }
   }

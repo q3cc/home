@@ -1,8 +1,10 @@
 import { mainStore } from "@/store";
+import { detectDeviceType } from "@/utils/device";
 let animationFrameId: number | null = null;
-let intervalId: ReturnType<typeof setInterval> | null = null;
 let canvas: HTMLCanvasElement | null = null;
 let snowflakeCount: number = 0;
+let lastFrameTime = 0;
+const targetFrameInterval = 1000 / 30;
 
 const snowflakes: {
   x: number;
@@ -39,7 +41,7 @@ const createCanvas = () => {
 const initSnowfall = () => {
   const store = mainStore();
   store.showSnowfall = true;
-  if (animationFrameId || intervalId) {
+  if (animationFrameId) {
     closeSnowfall();
   };
   createCanvas();
@@ -47,7 +49,7 @@ const initSnowfall = () => {
   if (!ctx || !canvas) return;
   const createSnowflakes = () => {
     snowflakes.length = 0;
-    const deviceType = detectDevice();
+    const deviceType = detectDeviceType();
     snowflakeCount = deviceType === "mobile" ? 28 : 60;
     for (let i = 0; i < snowflakeCount; i++) {
       snowflakes.push({
@@ -93,44 +95,25 @@ const initSnowfall = () => {
       };
     };
   };
-  const updateSnowflakes = () => {
-    drawSnowflakes();
+  const updateSnowflakes = (timestamp?: number) => {
+    const now = timestamp ?? performance.now();
+    if (now - lastFrameTime >= targetFrameInterval) {
+      lastFrameTime = now;
+      drawSnowflakes();
+    }
     animationFrameId = requestAnimationFrame(updateSnowflakes);
   };
   window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
   createSnowflakes();
+  lastFrameTime = 0;
   updateSnowflakes();
-  intervalId = setInterval(() => {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
-      updateSnowflakes();
-    };
-  }, 1000 / 30);
-};
-
-const detectDevice = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
-  if (/mobile|android|iphone|ipad|ipod|windows phone/.test(userAgent)) {
-    if (/ipad|tablet|playbook|silk|kindle/.test(userAgent)) {
-      return "tablet";
-    } else {
-      return "mobile";
-    };
-  } else {
-    return "pc";
-  };
 };
 
 const closeSnowfall = () => {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
-  };
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
   };
   if (canvas && canvas.parentNode === document.body) {
     document.body.removeChild(canvas);

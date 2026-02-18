@@ -1,6 +1,5 @@
-import { getTXAdcode, getTXWeather, getTXAdcodeS, getTXWeatherS, getGDAdcode, getGDAdcodeI, getGDWeather, getIPV4Addr, getIPV6Addr, getOtherWeather, getHXHWeather, getXMWeather, getIPV4AddrLocation } from "@/api";
-import { Error } from "@icon-park/vue-next";
-import { Speech, stopSpeech, SpeechLocal } from "@/utils/speech";
+import { getIPV4Addr, getXMWeather, getIPV4AddrLocation } from "@/api";
+import { stopSpeech, SpeechLocal } from "@/utils/speech";
 import xmAdcodeData from '@/assets/data/xiaomi_weather_adcode.json';
 import xmStatusData from '@/assets/data/xiaomi_weather_status.json';
 import { mainStore } from "@/store";
@@ -8,19 +7,19 @@ import { mainStore } from "@/store";
 import type {
     AdCode,
     WeatherInfo,
-    TXAdCodeResponse,
-    TXWeatherResponse,
-    GDAdCodeResponse,
-    GDAdcodeIResponse,
-    GDWeatherResponse,
     XMAdcodeItem,
-    XMWeatherStatusItem,
     XMWeatherStatusData,
     XMBeaufortLevel
 } from "@/typings/weather";
 
 const xmAdcodeDataTyped = xmAdcodeData as XMAdcodeItem[];
 const xmStatusDataTyped = xmStatusData as XMWeatherStatusData;
+const adcodeMap = new Map<string, string>(
+    xmAdcodeDataTyped.map((item) => [item.name, item.city_num])
+);
+const weatherStatusMap = new Map<number, string>(
+    xmStatusDataTyped.weatherinfo.map((item) => [item.code, item.wea])
+);
 
 const weatherData = reactive<{
     adCode: AdCode;
@@ -38,30 +37,29 @@ const weatherData = reactive<{
     },
 });
 
+const speakIfEnabled = (enabled: boolean, fileName: string) => {
+    if (!enabled) return;
+    stopSpeech();
+    SpeechLocal(fileName);
+};
+
+const failWeather = (enabled: boolean, fileName = "天气加载失败.mp3"): never => {
+    speakIfEnabled(enabled, fileName);
+    throw new Error("天气信息获取失败");
+};
+
 export async function getXMWT() {
     console.log("正在使用小米天气接口");
     const store = mainStore();
     // 获取 IP
     const ipv4addr = await getIPV4Addr();
     if (ipv4addr.ip == null || !ipv4addr) {
-        if (store.webSpeech) {
-            stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
-            SpeechLocal("位置信息获取失败.mp3");
-        };
-        throw "天气信息获取失败";
+        failWeather(store.webSpeech, "位置信息获取失败.mp3");
     };
     // 获取位置信息
     const location = await getIPV4AddrLocation(ipv4addr.ip);
     if (String(location?.code) !== "0" || !location?.data.region || !location?.data.city) {
-        if (store.webSpeech) {
-            stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
-            SpeechLocal("位置信息获取失败.mp3");
-        };
-        throw "天气信息获取失败";
+        failWeather(store.webSpeech, "位置信息获取失败.mp3");
     };
     // 加载 Adcode
     weatherData.adCode = {
@@ -69,22 +67,15 @@ export async function getXMWT() {
         adcode: findCityAdcode(location.data.region, location.data.city, location.data.county),
     };
     if (weatherData.adCode.adcode == null) {
-        if (store.webSpeech) {
-            stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
-            SpeechLocal("天气加载失败.mp3");
-        };
-        throw "天气信息获取失败";
+        failWeather(store.webSpeech);
     };
     // 获取天气信息
     const xmWeather = await getXMWeather(weatherData.adCode.adcode);
     try {
         const currentWeather = xmWeather.current;
-        const weatherCode = parseInt(currentWeather.weather);
+        const weatherCode = parseInt(currentWeather.weather, 10);
         const temperature = currentWeather.temperature.value;
         const windDirection = windDegreeToDirection(parseFloat(currentWeather.wind.direction.value));
-        const windPower = currentWeather.wind.speed.value + currentWeather.wind.speed.unit;
         const weatherDescription = getWeatherDescription(weatherCode);
         weatherData.weather = {
             weather: weatherDescription,
@@ -93,43 +84,28 @@ export async function getXMWT() {
             windpower: convertWindSpeed(currentWeather.wind.speed.value, { returnRange: true, includeDescription: false }),
         };
         return weatherData;
-    } catch (e) {
-        if (store.webSpeech) {
-            stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
-            SpeechLocal("天气加载失败.mp3");
-        };
-        throw "天气信息获取失败";
+    } catch {
+        failWeather(store.webSpeech);
     };
 };
 
 const findCityAdcode = (region: string, city: string, county: string): string | null => {
     if (county) {
         const fullCountyName = `${city}.${county}`;
-        const countyMatch = xmAdcodeDataTyped.filter(item => item.name === fullCountyName);
-        if (countyMatch.length === 1) {
-            return countyMatch[0].city_num;
-        };
+        const match = adcodeMap.get(fullCountyName);
+        if (match) return match;
     };
-    const cityMatch = xmAdcodeDataTyped.filter(item => item.name === city);
-    if (cityMatch.length === 1) {
-        return cityMatch[0].city_num;
-    };
-    const regionCityMatch = xmAdcodeDataTyped.filter(item => item.name === `${region}.${city}`);
-    if (regionCityMatch.length === 1) {
-        return regionCityMatch[0].city_num;
-    };
-    const regionMatch = xmAdcodeDataTyped.filter(item => item.name === region);
-    if (regionMatch.length === 1) {
-        return regionMatch[0].city_num;
-    };
+    const cityMatch = adcodeMap.get(city);
+    if (cityMatch) return cityMatch;
+    const regionCityMatch = adcodeMap.get(`${region}.${city}`);
+    if (regionCityMatch) return regionCityMatch;
+    const regionMatch = adcodeMap.get(region);
+    if (regionMatch) return regionMatch;
     return null;
 };
 
 const getWeatherDescription = (weatherCode: number): string => {
-    const weatherInfo = xmStatusDataTyped.weatherinfo.find(item => item.code === weatherCode);
-    return weatherInfo ? weatherInfo.wea : "未知天气";
+    return weatherStatusMap.get(weatherCode) || "未知天气";
 };
 
 const windDegreeToDirection = (degree: number): string => {

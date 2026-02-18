@@ -1,4 +1,4 @@
-import { createApp } from "vue";
+import { createApp, watch } from "vue";
 import "@/style/style.scss";
 import App from "@/App.vue";
 import { mainStore } from "@/store";
@@ -30,46 +30,49 @@ if (urlParams.get("set") === "reset") {
   });
   if (store.webSpeech) {
     stopSpeech();
-    const voice = import.meta.env.VITE_TTS_Voice;
-    const vstyle = import.meta.env.VITE_TTS_Style;
     SpeechLocal("重置2.mp3");
   };
   store.resetStore();
 };
 
 // PWA
-navigator.serviceWorker.addEventListener("controllerchange", async () => {
-  // 弹出更新提醒
-  console.log("站点已更新，刷新后生效");
-  ElMessage("站点已更新，刷新后生效");
-  if (store.webSpeech) {
-    stopSpeech();
-    const voice = import.meta.env.VITE_TTS_Voice;
-    const vstyle = import.meta.env.VITE_TTS_Style;
-    SpeechLocal("网站更新.mp3");
-  };
-});
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", async () => {
+    // 弹出更新提醒
+    console.log("站点已更新，刷新后生效");
+    ElMessage("站点已更新，刷新后生效");
+    if (store.webSpeech) {
+      stopSpeech();
+      SpeechLocal("网站更新.mp3");
+    };
+  });
+}
 
-const setupset = () => setTimeout(() => {
-  if (urlParams.get("set") != "reset" && store.imgLoadStatus === true) {
-    if (urlParams.get("bg")) {
-      store.coverType = Number(urlParams.get("bg"));
-    };
-    if (urlParams.get("bgc") && (store.coverType == 0 || urlParams.get("bg") == "0")) {
-      store.sBGCount = String(urlParams.get("bgc"));
-    };
-    if (urlParams.get("devs")) {
-      store.setV = Boolean(urlParams.get("devs"));
-    };
-    if (urlParams.get("pap")) {
-      store.playerAutoplay = Boolean(urlParams.get("pap"));
-    };
-  } else {
-    setupset();
+const applyUrlParams = () => {
+  if (urlParams.get("set") === "reset") return;
+  if (urlParams.get("bg")) {
+    store.coverType = Number(urlParams.get("bg"));
   };
-}, 300);
+  if (urlParams.get("bgc") && (store.coverType == 0 || urlParams.get("bg") == "0")) {
+    store.sBGCount = String(urlParams.get("bgc"));
+  };
+  if (urlParams.get("devs")) {
+    store.setV = Boolean(urlParams.get("devs"));
+  };
+  if (urlParams.get("pap")) {
+    store.playerAutoplay = Boolean(urlParams.get("pap"));
+  };
+};
 
-setupset();
+const stopApplyWatch = watch(
+  () => store.imgLoadStatus,
+  (loaded) => {
+    if (!loaded) return;
+    applyUrlParams();
+    stopApplyWatch();
+  },
+  { immediate: true },
+);
 
 // 添加控制台清理命令
 (window as any).clearStorage = function() {

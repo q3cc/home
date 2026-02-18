@@ -21,7 +21,7 @@ async function gst() {
             const { timestamp: t } = await (await fetch("https://nanorocky.top/time/")).json();
             x = t as number;
             y = f() as number;
-        } catch (error) {
+        } catch {
             x = y = f() as number;
         };
     };

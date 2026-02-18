@@ -20,11 +20,11 @@
 </template>
 
 <script setup lang="ts">
-import { getTXAdcode, getTXWeather, getTXAdcodeS, getTXWeatherS, getGDAdcode, getGDAdcodeI, getGDWeather, getIPV4Addr, getIPV6Addr, getOtherWeather, getHXHWeather, getXMWeather, getIPV4AddrLocation } from "@/api";
+import { getTXAdcode, getTXWeather, getTXAdcodeS, getTXWeatherS, getGDAdcode, getGDAdcodeI, getGDWeather, getIPV4Addr, getOtherWeather, getHXHWeather } from "@/api";
 import { getXMWT } from "@/utils/xiaomiWeather";
 import { Error } from "@icon-park/vue-next";
 import { mainStore } from "@/store";
-import { Speech, stopSpeech, SpeechLocal } from "@/utils/speech";
+import { stopSpeech, SpeechLocal } from "@/utils/speech";
 
 import type {
   AdCode,
@@ -34,12 +34,20 @@ import type {
   GDAdCodeResponse,
   GDAdcodeIResponse,
   GDWeatherResponse,
-  XMAdcodeItem,
-  XMWeatherStatusItem,
-  XMWeatherStatusData
 } from "@/typings/weather";
 
 const store = mainStore();
+
+const speakIfEnabled = (fileName: string) => {
+  if (!store.webSpeech) return;
+  stopSpeech();
+  SpeechLocal(fileName);
+};
+
+const failWeather = (fileName = "天气加载失败.mp3"): never => {
+  speakIfEnabled(fileName);
+  throw new Error("天气信息获取失败");
+};
 
 // 加载密钥
 const txkey = import.meta.env.VITE_TX_WEATHER_KEY; // 腾讯天气密钥
@@ -75,12 +83,7 @@ const getTemperature = (min, max) => {
     return Math.round(average);
   } catch (error) {
     console.error("计算温度出现错误：", error);
-    if (store.webSpeech) {
-      stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
-      SpeechLocal("天气信息无法计算.mp3");
-    };
+    speakIfEnabled("天气信息无法计算.mp3");
     return "NaN";
   }
 };
@@ -92,13 +95,7 @@ const getTXW = async () => {
     // 获取 Adcode
     const adCode = (await getTXAdcode(txkey)) as TXAdCodeResponse;
     if (String(adCode.status) !== "0") {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("位置信息获取失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather("位置信息获取失败.mp3");
     };
     weatherData.adCode = {
       city: adCode.result.ad_info.district || adCode.result.ad_info.city || adCode.result.ad_info.province || "未知地区",
@@ -106,33 +103,15 @@ const getTXW = async () => {
     };
     // 获取天气信息
     if (weatherData.adCode.adcode == null) {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("天气加载失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather();
     };
     const txWeather = (await getTXWeather(txkey, weatherData.adCode.adcode)) as TXWeatherResponse;
     if (String(txWeather.status) !== "0") {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("天气加载失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather();
     };
     const realtimeData = txWeather.result.realtime?.[0];
     if (!realtimeData?.infos) {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("天气加载失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather();
     };
     weatherData.weather = {
       weather: realtimeData.infos.weather,
@@ -145,13 +124,7 @@ const getTXW = async () => {
     // 获取 Adcode
     const adCode = (await getTXAdcodeS(txkey, txskey)) as TXAdCodeResponse;
     if (String(adCode?.status) !== "0") {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("位置信息获取失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather("位置信息获取失败.mp3");
     };
     weatherData.adCode = {
       city: adCode.result.ad_info.district || adCode.result.ad_info.city || adCode.result.ad_info.province || "未知地区",
@@ -159,33 +132,15 @@ const getTXW = async () => {
     };
     // 获取天气信息
     if (weatherData.adCode.adcode == null) {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("天气加载失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather();
     };
     const txWeather = (await getTXWeatherS(txkey, weatherData.adCode.adcode, txskey)) as TXWeatherResponse;
     if (String(txWeather.status) !== "0") {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("天气加载失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather();
     };
     const realtimeData = txWeather.result.realtime?.[0];
     if (!realtimeData?.infos) {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("天气加载失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather();
     };
     weatherData.weather = {
       weather: realtimeData.infos.weather,
@@ -205,13 +160,7 @@ const getGDW = async () => {
     const ipV4addr = await getIPV4Addr();
     adCodei = (await getGDAdcodeI(ipV4addr.ip, gdkey)) as GDAdcodeIResponse;
     if (String(adCodei?.infocode) !== "10000" || String(adCodei?.status) !== "1") {
-      if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("位置信息获取失败.mp3");
-      };
-      throw "天气信息获取失败";
+      failWeather("位置信息获取失败.mp3");
     };
   };
   if (!adCodei) {
@@ -227,23 +176,11 @@ const getGDW = async () => {
   };
   // 获取天气信息
   if (weatherData.adCode.adcode == null) {
-    if (store.webSpeech) {
-      stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
-      SpeechLocal("天气加载失败.mp3");
-    };
-    throw "天气信息获取失败";
+    failWeather();
   };
   const result = (await getGDWeather(gdkey, weatherData.adCode.adcode)) as GDWeatherResponse;
   if (String(result?.status) !== "1" || String(result?.infocode) !== "10000") {
-    if (store.webSpeech) {
-      stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
-      SpeechLocal("天气加载失败.mp3");
-    };
-    throw "天气信息获取失败";
+    failWeather();
   };
   weatherData.weather = {
     weather: result.lives[0].weather,
@@ -271,13 +208,7 @@ const getOW = async () => {
 const getHXHW = async () => {
   const result = await getHXHWeather();
   if (String(result?.success) !== "true") {
-    if (store.webSpeech) {
-      stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
-      SpeechLocal("天气加载失败.mp3");
-    };
-    throw "天气信息获取失败";
+    failWeather();
   };
   weatherData.adCode = {
     city: result.city || "未知地区",
@@ -294,78 +225,60 @@ const getHXHW = async () => {
 const getXMW = async () => {
   const xmw = await getXMWT();
   if (!xmw) {
-    throw "天气信息获取失败";
+    failWeather();
   } else {
     weatherData.adCode = xmw.adCode;
     weatherData.weather = xmw.weather;
   };
 };
 
+const runProviders = async (
+  providers: Array<{ name: string; run: () => Promise<void> }>,
+) => {
+  let lastError: unknown = null;
+  for (const provider of providers) {
+    try {
+      await provider.run();
+      return;
+    } catch (error) {
+      lastError = error;
+      console.error(`${provider.name}获取失败`, error);
+    }
+  }
+  throw lastError ?? new Error("天气信息获取失败");
+};
+
 // 获取天气数据
 const getWeatherData = async () => {
   try {
-    // 获取地理位置信息
     if (!gdkey && !txkey) {
       console.log("未配置天气接口密钥，默认使用小米天气接口");
-      try {
-        await getXMW();
-      } catch (error) {
-        console.error("小米天气接口获取失败，尝试使用和风天气接口");
-        try {
-          await getHXHW();
-        } catch (error) {
-          console.error("和风天气接口获取失败，使用其他备用接口");
-          await getOW();
-        };
-      };
+      await runProviders([
+        { name: "小米天气接口", run: getXMW },
+        { name: "和风天气接口", run: getHXHW },
+        { name: "备用天气接口", run: getOW },
+      ]);
     } else if (!txkey) {
-      // 调用高德天气 API
       console.log("正在使用高德天气接口");
-      try {
-        await getGDW();
-      } catch (error) {
-        console.error("高德天气接口获取失败，尝试调用备用接口");
-        try {
-          await getXMW();
-        } catch (error) {
-          try {
-            await getHXHW();
-          } catch (error) {
-            await getOW();
-          };
-        };
-      };
+      await runProviders([
+        { name: "高德天气接口", run: getGDW },
+        { name: "小米天气接口", run: getXMW },
+        { name: "和风天气接口", run: getHXHW },
+        { name: "备用天气接口", run: getOW },
+      ]);
     } else {
-      // 调用腾讯天气 API
-      try {
-        await getTXW();
-      } catch (error) {
-        console.error("腾讯天气接口获取失败，尝试使用高德天气接口");
-        try {
-          await getGDW();
-        } catch (error) {
-          console.error("高德天气接口获取失败，尝试调用备用接口");
-          try {
-            await getXMW();
-          } catch (error) {
-            try {
-              await getHXHW();
-            } catch (error) {
-              await getOW();
-            };
-          };
-        };
-      };
+      await runProviders([
+        { name: "腾讯天气接口", run: getTXW },
+        { name: "高德天气接口", run: getGDW },
+        { name: "小米天气接口", run: getXMW },
+        { name: "和风天气接口", run: getHXHW },
+        { name: "备用天气接口", run: getOW },
+      ]);
     };
   } catch (error) {
-    console.error("天气信息获取失败：" + error);
+    console.error("天气信息获取失败：", error);
     onError("天气信息获取失败");
-    if (store.webSpeech) {
-      stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
-      SpeechLocal("天气加载失败.mp3");
-    };
+    speakIfEnabled("天气加载失败.mp3");
   };
 };
 

@@ -13,8 +13,12 @@ export const getColor = (img: HTMLImageElement): Promise<'light' | 'dark'> => {
         if (!context) {
             return reject(new Error('无法获取 canvas 的 2d context'));
         };
-        canvas.width = img.width;
-        canvas.height = img.height;
+        const sampleSize = 64;
+        const scale = Math.min(sampleSize / img.width, sampleSize / img.height, 1);
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        canvas.width = width;
+        canvas.height = height;
         try {
             context.drawImage(img, 0, 0, canvas.width, canvas.height);
             const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -32,7 +36,7 @@ export const getColor = (img: HTMLImageElement): Promise<'light' | 'dark'> => {
                 };
             };
             resolve(light > dark ? 'light' : 'dark');
-        } catch (e) {
+        } catch {
             reject(new Error('无法处理图片以获取颜色'));
         };
     });
