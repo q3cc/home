@@ -4,8 +4,8 @@
       @error.once="imgLoadError" @animationend="imgAnimationEnd" />
     <div :class="store.backgroundShow ? 'gray o-hidden' : 'gray'" />
     <Transition name="fade" mode="out-in">
-      <a v-if="store.backgroundShow && store.coverType != '3'" class="down" :href="bgUrl" target="_blank">
-        下载壁纸
+      <a v-if="store.backgroundShow" class="down" :href="bgUrl" target="_blank" rel="noopener noreferrer">
+        保存当前壁纸
       </a>
     </Transition>
   </div>
@@ -29,6 +29,18 @@ const imgTimeout = ref(null);
 const emit = defineEmits(["loadComplete"]);
 const key = import.meta.env.VITE_SFILE_SKEY;
 const isLoading = ref(false);
+const LOCKED_COVER_TYPE = 0;
+
+const lockWallpaperSettings = () => {
+  if (store.coverType !== LOCKED_COVER_TYPE) {
+    store.coverType = LOCKED_COVER_TYPE;
+  };
+  if (store.sBGCount != null) {
+    store.setSBGCount(null);
+  };
+};
+
+lockWallpaperSettings();
 
 // 自定义壁纸
 // 酪灰的小批注：这里增加了从配置文件读取壁纸数的功能，使得在增加壁纸时不需要重新编译项目，只需修改这个 json 文件内的值
@@ -97,6 +109,10 @@ const changeBg = async (type) => {
       const configLoaded = await loadConfig();
       const deviceType = detectDeviceType();
       if (!configLoaded) return;
+      if (type !== LOCKED_COVER_TYPE) {
+        lockWallpaperSettings();
+        type = LOCKED_COVER_TYPE;
+      };
       if (type == 0) {
         // 这里指定了所有自定义背景的文件格式，必须统一。可以自定义修改，比如 webp 或 png
         // 酪灰的小批注：这里添加了设备类型识别以加载不同分辨率的壁纸
@@ -123,12 +139,6 @@ const changeBg = async (type) => {
             bgUrl.value = `/images/background${bgRandom}.jpg`;
           };
         };
-      } else if (type == 1) {
-        bgUrl.value = "https://t.alcy.cc/ysz";
-      } else if (type == 2) {
-        bgUrl.value = "https://t.alcy.cc/ysz";
-      } else if (type == 3) {
-        bgUrl.value = "https://t.alcy.cc/ysz";
       };
     } finally {
       isLoading.value = false;
@@ -181,7 +191,11 @@ const imgLoadError = async () => {
 watch(
   () => store.coverType,
   async (value) => {
-    await changeBg(Number(value));
+    if (Number(value) !== LOCKED_COVER_TYPE) {
+      lockWallpaperSettings();
+      return;
+    };
+    await changeBg(LOCKED_COVER_TYPE);
   },
   { immediate: true }
 );
@@ -248,8 +262,9 @@ const SeasonStyle = async (type, state, where) => {
 };
 
 onMounted(async () => {
+  lockWallpaperSettings();
   // 加载壁纸
-  await changeBg(Number(store.coverType));
+  await changeBg(LOCKED_COVER_TYPE);
   // 加载季节特效
   if (store.seasonalEffects) { await SeasonStyle(0, true, 'normal') } else { sest = 1 };
 });
@@ -273,9 +288,8 @@ watch(() => store.seasonalEffects, async (value) => {
 });
 
 watch(() => store.sBGCount, async (value) => {
-  if (store.coverType != 0 || value == null || value == 0) return;
-  sBGCountN = value;
-  await changeBg(Number(store.coverType));
+  if (value == null || value == 0) return;
+  sBGCountN = null;
   store.setSBGCount(null);
 });
 </script>

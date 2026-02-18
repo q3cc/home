@@ -13,20 +13,7 @@
             </el-collapse-item>
             <el-collapse-item title="壁纸调整" name="2">
                 <div class="item">
-                    <div class="upver">使用内置壁纸时临时指定壁纸</div>
-                </div>
-                <div class="item">
-                    <el-form :model="form" style="max-width: 120px" label-width="auto"
-                        @submit.prevent="handleSetWallpaper">
-                        <el-form-item prop="wallpaperId" :rules="[
-                            { required: true, message: '壁纸号不能为空', trigger: 'blur' },
-                            { pattern: /^\d+$/, message: '壁纸号必须为纯数字', trigger: ['blur', 'change'] }
-                        ]">
-                            <el-input v-model="form.wallpaperId" type="text" autocomplete="off" clearable />
-                            <el-button plain class="el-button" native-type="submit"
-                                :disabled="!form.wallpaperId">确定</el-button>
-                        </el-form-item>
-                    </el-form>
+                    <div class="upver">随机内置壁纸已锁定，开发模式下也不支持临时指定壁纸。</div>
                 </div>
             </el-collapse-item>
             <el-collapse-item title="个性化设置" name="3">
@@ -56,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import { CheckSmall, CloseSmall, SuccessPicture } from "@icon-park/vue-next";
 import { mainStore } from "@/store";
 import { storeToRefs } from "pinia";
@@ -160,10 +147,6 @@ const toggleEffect = (type: 'snow' | 'firefly' | 'lantern') => {
     }
 };
 
-const form = reactive({
-    wallpaperId: ''
-})
-
 const resetSettings = () => {
     chuores = chuores + 1;
     if (chuores === 3) {
@@ -203,48 +186,6 @@ const resetSettings = () => {
     };
 };
 
-const handleSetWallpaper = () => {
-    if (store.coverType != 0) {
-        ElMessage.error('当前使用非内置壁纸，不支持该功能！');
-        if (store.webSpeech) {
-            stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
-            SpeechLocal("壁纸ID设置失败.mp3");
-        };
-        return;
-    };
-    if (!form.wallpaperId.trim()) {
-        ElMessage.error('壁纸号不能为空！');
-        if (store.webSpeech) {
-            stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
-            SpeechLocal("壁纸ID设置失败.mp3");
-        };
-        return;
-    };
-    if (!/^\d+$/.test(form.wallpaperId)) {
-        ElMessage.error('壁纸号必须为纯数字！');
-        if (store.webSpeech) {
-            stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
-            SpeechLocal("壁纸ID设置失败.mp3");
-        };
-        return;
-    };
-    const wallpaperId = parseInt(form.wallpaperId, 10);
-    store.setSBGCount(Number(wallpaperId));
-    ElMessage.success(`已设置壁纸ID: ${wallpaperId}`);
-    if (store.webSpeech) {
-        stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
-        SpeechLocal("壁纸ID设置成功.mp3");
-    };
-    form.wallpaperId = '';
-};
 </script>
 
 <style lang="scss" scoped>

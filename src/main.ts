@@ -21,6 +21,8 @@ pinia.use(validationPlugin);
 app.use(pinia);
 app.mount("#app");
 const store = mainStore();
+store.coverType = 0;
+store.sBGCount = null;
 
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get("set") === "reset") {
@@ -50,12 +52,6 @@ if ("serviceWorker" in navigator) {
 
 const applyUrlParams = () => {
   if (urlParams.get("set") === "reset") return;
-  if (urlParams.get("bg")) {
-    store.coverType = Number(urlParams.get("bg"));
-  };
-  if (urlParams.get("bgc") && (store.coverType == 0 || urlParams.get("bg") == "0")) {
-    store.sBGCount = String(urlParams.get("bgc"));
-  };
   if (urlParams.get("devs")) {
     store.setV = Boolean(urlParams.get("devs"));
   };

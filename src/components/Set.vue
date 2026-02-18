@@ -3,12 +3,7 @@
     <el-collapse class="collapse" v-model="activeName" accordion>
       <el-collapse-item title="个性壁纸" name="1">
         <div class="bg-set">
-          <el-radio-group v-model="coverType" text-color="#ffffff" @change="radioChange">
-            <el-radio value="0" size="large" border>默认壁纸</el-radio>
-            <el-radio value="1" size="large" border>每日一图</el-radio>
-            <el-radio value="2" size="large" border>随机风景</el-radio>
-            <el-radio value="3" size="large" border>随机动漫</el-radio>
-          </el-radio-group>
+          <span class="bg-lock-tip">当前仅保留随机内置壁纸，已禁止切换。可在背景页点击“保存当前壁纸”。</span>
         </div>
       </el-collapse-item>
       <el-collapse-item title="主题设置" name="2">
@@ -108,16 +103,13 @@
 </template>
 
 <script setup lang="ts">
-import { CheckSmall, CloseSmall, SuccessPicture } from "@icon-park/vue-next";
+import { CheckSmall, CloseSmall } from "@icon-park/vue-next";
 import DevSet from "@/components/DevSet.vue";
 import { mainStore } from "@/store";
 import { storeToRefs } from "pinia";
-import config from "@/../package.json";
-import { Speech, stopSpeech, SpeechLocal } from "@/utils/speech";
 
 const store = mainStore();
 const {
-  coverType,
   siteStartShow,
   musicClick,
   playerLrcShow,
@@ -135,28 +127,10 @@ const {
   seasonalEffects,
   setV,
   theme,
-  msgNameShow,
 } = storeToRefs(store);
 
 // 默认选中项
 const activeName = ref("0");
-
-// 壁纸切换
-const radioChange = () => {
-  ElMessage({
-    message: "壁纸更换成功",
-    icon: h(SuccessPicture, {
-      theme: "filled",
-      fill: "var(--el-message-icon-color)",
-    }),
-  });
-  if (store.webSpeech) {
-    stopSpeech();
-    const voice = import.meta.env.VITE_TTS_Voice;
-    const vstyle = import.meta.env.VITE_TTS_Style;
-    SpeechLocal("更换壁纸成功.mp3");
-  };
-};
 </script>
 
 <style lang="scss" scoped>
@@ -184,6 +158,17 @@ const radioChange = () => {
 
       .el-collapse-item__content {
         padding: 20px;
+
+        .bg-set {
+          display: flex;
+          align-items: center;
+
+          .bg-lock-tip {
+            color: var(--text-color);
+            font-size: 14px;
+            line-height: 1.6;
+          }
+        }
 
         .item {
           display: flex;
