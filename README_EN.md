@@ -45,8 +45,8 @@ injectRegister: false,
 
 * **Installation** [node.js](https://nodejs.org/en-us/) **Environment**
 
-  > node > 22.17.0 <p>
-  > npm > 10.9.2
+  > node > 24.13.0 <p>
+  > npm > 10.15.0
 
 * Then run the `PowerShell` terminal with **administrator privileges** and `cd` to the project root directory
 * In the `terminal` type:

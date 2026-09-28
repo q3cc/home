@@ -1,9 +1,9 @@
 <template>
   <div v-if="siteLinks[0]" class="links">
     <div class="line">
-        <Icon size="20" class="iconl">
-          <Link />
-        </Icon>
+      <Icon size="20" class="iconl">
+        <Link />
+      </Icon>
       <span class="title text-truncate-ellipsis" v-if="store.mobileOpenState"
         @click="store.setOpenState = !store.setOpenState">网站列表</span>
       <span class="title" v-else>网站列表</span>

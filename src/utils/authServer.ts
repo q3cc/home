@@ -7,9 +7,11 @@
  */
 
 
-import { md5 as d } from "js-md5";
+import { md5 as md } from '@noble/hashes/legacy.js';
+import { bytesToHex as byt, utf8ToBytes as ut } from '@noble/hashes/utils.js';
 
 let x: number | null = null, y: number | null = null;
+const d = (msg: string) => byt(md(ut(msg)));
 const f = () => Math.floor(Date.now() / 1000), o = (v) => v.toString(16);
 
 async function gst() {
@@ -18,7 +20,7 @@ async function gst() {
     // 而下面的签名 Token，有效期设置的都是几秒级别，所以优先使用网络时间。
     if (!x || !y) {
         try {
-            const { timestamp: t } = await (await fetch("https://nanorocky.top/time/")).json();
+            const { timestamp: t } = await (await fetch("https://api.nanorocky.top/time/")).json();
             x = t as number;
             y = f() as number;
         } catch {

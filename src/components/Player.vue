@@ -13,6 +13,7 @@ import APlayer from "@worstone/vue-aplayer";
 import type { APlayer as APlayerType } from '@worstone/vue-aplayer';
 import { Speech, stopSpeech, SpeechLocal } from "@/utils/speech";
 import { decodeDWQYRC } from "@/utils/decodeDWQYRC";
+import { alignPilferedLyrics } from "@/utils/checkPilferDWRC";
 
 const store = mainStore();
 let showDWRCRunning = 0;
@@ -140,7 +141,7 @@ watch(
 onMounted(() => {
   nextTick(() => {
     try {
-      getPlayerList(props.songServer, props.songType, props.songId, props.songServerSE, props.songIdSE).then((res) => {
+      getPlayerList(props.songServer, props.songType, props.songId, props.songServerSE, props.songIdSE, store.playerTrLrc).then((res) => {
         // 更改播放器加载状态
         store.musicIsOk = true;
         // 生成歌单
@@ -172,8 +173,8 @@ onMounted(() => {
       });
       if (store.webSpeech) {
         stopSpeech();
-        const voice = import.meta.env.VITE_TTS_Voice;
-        const vstyle = import.meta.env.VITE_TTS_Style;
+        const voice = envConfig.VITE_TTS_Voice;
+        const vstyle = envConfig.VITE_TTS_Style;
         SpeechLocal("播放器加载失败.mp3");
       };
     };
@@ -222,8 +223,8 @@ const onPlay = () => {
   if (store.webSpeech) {
     if (store.playerSpeechName) {
       stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
+      const voice = envConfig.VITE_TTS_Voice;
+      const vstyle = envConfig.VITE_TTS_Style;
       Speech(
         "正在播放，“" +
         store.getPlayerData.artist +
@@ -330,16 +331,16 @@ const loadMusicError = () => {
     notice = "播放歌曲出现错误，播放器将在 2s 后进行下一首";
     if (store.webSpeech) {
       stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
+      const voice = envConfig.VITE_TTS_Voice;
+      const vstyle = envConfig.VITE_TTS_Style;
       SpeechLocal("歌曲加载失败.mp3");
     };
   } else {
     notice = "播放歌曲出现错误";
     if (store.webSpeech) {
       stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
+      const voice = envConfig.VITE_TTS_Voice;
+      const vstyle = envConfig.VITE_TTS_Style;
       SpeechLocal("播放器未知异常.mp3");
     };
   };
@@ -364,72 +365,187 @@ const fetchDWRC = async (dwrcUrl: string) => {
   const dwrcText = await dwrcSource.text();
   store.dwrcIndex = playIndex.value;
   try {
-    store.dwrcEnable = true;
-    const decoded = decodeDWQYRC(dwrcText);
+    const decoded = decodeDWQYRC(dwrcText, store.playerRMMetadata);
     store.dwrcTemp = Array.isArray(decoded) ? decoded as DWRCItem[] : [];
     store.dwrcLoading = false;
+    store.dwrcEnable = true;
     return;
   } catch (e) {
-    store.dwrcEnable = false;
     store.dwrcTemp = [];
     store.dwrcLoading = false;
+    store.dwrcEnable = false;
   };
-  // 接入 AMLL TTML Database
+  // 额外处理
   const songUrlInf = new URLSearchParams(new URL(dwrcUrl).search);
   const songId = songUrlInf.get("id");
   const songServer = songUrlInf.get("server");
+  const baseUrl = `${new URL(dwrcUrl).origin}${new URL(dwrcUrl).pathname}`;
   if (!songId) {
     return;
   };
-  const songUrlInfUrl = store.playerDWRCATDBF
-    ? {
-      netease: `https://ghfast.top/https://raw.githubusercontent.com/Steve-xmh/amll-ttml-db/main/ncm-lyrics/${songId}.yrc`,
-      tencent: `https://ghfast.top/https://raw.githubusercontent.com/Steve-xmh/amll-ttml-db/main/qq-lyrics/${songId}.qrc`,
-    }
-    : {
-      netease: `https://raw.githubusercontent.com/Steve-xmh/amll-ttml-db/main/ncm-lyrics/${songId}.yrc`,
-      tencent: `https://raw.githubusercontent.com/Steve-xmh/amll-ttml-db/main/qq-lyrics/${songId}.qrc`,
-    };
-  if (!songServer || !["netease", "tencent"].includes(songServer)) {
-    return;
-  };
-  try {
-    const amllUrl = songUrlInfUrl[songServer].replace("${songIdlrc}", songId);
-    const amllSource = await fetch(amllUrl);
-    const amllText = await amllSource.text();
-    store.dwrcEnable = true;
-    const decoded = decodeDWQYRC(amllText);
-    store.dwrcTemp = Array.isArray(decoded) ? decoded as DWRCItem[] : [];
-    store.dwrcLoading = false;
-  } catch (e) {
-    if (store.playerDWRCATDBF) {
-      const songUrlInfUrlse = {
-        netease: `https://raw.githubusercontent.com/Steve-xmh/amll-ttml-db/main/ncm-lyrics/${songId}.yrc`,
-        tencent: `https://raw.githubusercontent.com/Steve-xmh/amll-ttml-db/main/qq-lyrics/${songId}.qrc`,
+  // 接入 AMLL TTML Database
+  if (store.playerDWRCATDB) {
+    const songUrlInfUrl = store.playerDWRCATDBF
+      ? {
+        netease: `https://ghfast.top/https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/ncm-lyrics/${songId}.yrc`,
+        tencent: `https://ghfast.top/https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/qq-lyrics/${songId}.qrc`,
+      }
+      : {
+        netease: `https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/ncm-lyrics/${songId}.yrc`,
+        tencent: `https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/qq-lyrics/${songId}.qrc`,
       };
-      if (!songServer || !["netease", "tencent"].includes(songServer)) {
-        return;
-      };
-      try {
-        const amllUrlse = songUrlInfUrlse[songServer].replace("${songIdlrc}", songId);
-        const amllSourcese = await fetch(amllUrlse);
-        const amllTextse = await amllSourcese.text();
-        store.dwrcEnable = true;
-        const decodedse = decodeDWQYRC(amllTextse);
-        store.dwrcTemp = Array.isArray(decodedse) ? decodedse as DWRCItem[] : [];
-        store.dwrcLoading = false;
-        return;
-      } catch (e) {
-        store.dwrcEnable = false;
-        store.dwrcTemp = [];
-        store.dwrcLoading = false;
-      };
+    if (!songServer || !["netease", "tencent"].includes(songServer)) {
       return;
     };
-    store.dwrcEnable = false;
+    try {
+      const amllUrl = songUrlInfUrl[songServer].replace("${songIdlrc}", songId);
+      const amllSource = await fetch(amllUrl);
+      if (amllSource.status === 404) {
+        store.dwrcTemp = [];
+        store.dwrcLoading = false;
+        store.dwrcEnable = false;
+      } else if (!amllSource.ok) {
+        throw new Error(`AMLL TTML Database 调用失败...`);
+      } else {
+        const amllText = await amllSource.text();
+        const decoded = decodeDWQYRC(amllText, store.playerRMMetadata);
+        store.dwrcTemp = Array.isArray(decoded) ? decoded as DWRCItem[] : [];
+        store.dwrcLoading = false;
+        store.dwrcEnable = true;
+        return;
+      };
+    } catch (e) {
+      if (store.playerDWRCATDBF) {
+        const songUrlInfUrlse = {
+          netease: `https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/ncm-lyrics/${songId}.yrc`,
+          tencent: `https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/qq-lyrics/${songId}.qrc`,
+        };
+        if (songServer || ["netease", "tencent"].includes(songServer)) {
+          try {
+            const amllUrlse = songUrlInfUrlse[songServer].replace("${songIdlrc}", songId);
+            const amllSourcese = await fetch(amllUrlse);
+            if (amllSourcese.status === 404) {
+              store.dwrcTemp = [];
+              store.dwrcLoading = false;
+              store.dwrcEnable = false;
+            } else if (!amllSourcese.ok) {
+              store.dwrcTemp = [];
+              store.dwrcLoading = false;
+              store.dwrcEnable = false;
+            } else {
+              const amllTextse = await amllSourcese.text();
+              const decodedse = decodeDWQYRC(amllTextse, store.playerRMMetadata);
+              store.dwrcTemp = Array.isArray(decodedse) ? decodedse as DWRCItem[] : [];
+              store.dwrcLoading = false;
+              store.dwrcEnable = true;
+              return;
+            };
+          } catch (e) {
+            store.dwrcTemp = [];
+            store.dwrcLoading = false;
+            store.dwrcEnable = false;
+          };
+        };
+      };
+    };
+  } else {
     store.dwrcTemp = [];
     store.dwrcLoading = false;
+    store.dwrcEnable = false;
   };
+  // 偷东西
+  if (store.playerDWRCPilfer && baseUrl && store.dwrcEnable != true) {
+    try {
+      const currentAudio = player.value!.aplayer.audio[player.value!.aplayer.index];
+      const currentName = currentAudio.name?.trim();
+      const currentArtist = currentAudio.artist?.trim();
+      const currentServer = songServer === "netease" ? "tencent" : "netease";
+      const pilferUrl = `${baseUrl}?server=${currentServer}&type=search&id=0&dwrc=true&keyword=${encodeURIComponent(currentName)}`;
+      const resp = await fetch(pilferUrl);
+      const data = await resp.json();
+      const list = Array.isArray(data)
+        ? data
+        : (data && typeof data === "object" ? Object.values(data) : []);
+      if (list.length > 0) {
+        const stripBrackets = (title?: string) => {
+          if (!title) return '';
+          let result = String(title);
+          const pairRegex = /[（(\[{<【《][^（(\[{<【《）)\]}>】》]*[）)\]}>】》]/g;
+          let depth = 0;
+          const MAX_DEPTH = 10;
+          while (depth < MAX_DEPTH) {
+            const previousResult = result;
+            result = result.replace(pairRegex, '');
+            if (result.length === previousResult.length) {
+              break;
+            };
+            depth++;
+          };
+          result = result.replace(/[（(\[{<【《）)\]}>】》]/g, '');
+          return result.replace(/\s+/g, ' ').trim();
+        };
+        const normalizeArtist = (name?: string) => {
+          if (!name) return '';
+          return stripBrackets(name);
+        };
+        const normalizedCurrentName = stripBrackets(currentName);
+        const normalizedCurrentArtist = normalizeArtist(currentArtist);
+        const match = list.find(
+          (item) =>
+            stripBrackets(item.name) === normalizedCurrentName &&
+            normalizeArtist(item.artist) === normalizedCurrentArtist
+        );
+        if (match && match.lrc) {
+          let lrcUrl = match.lrc;
+          const urlObj = new URL(lrcUrl);
+          const dwrcParam = urlObj.searchParams.get("dwrc");
+          if (dwrcParam === null) {
+            urlObj.searchParams.append("dwrc", "true");
+          } else if (dwrcParam === "false") {
+            urlObj.searchParams.set("dwrc", "true");
+          };
+          lrcUrl = urlObj.toString();
+          const pilferSource = await fetch(lrcUrl);
+          const pilferText = await pilferSource.text();
+          const originalLrcUrl = player.value!.aplayer.audio[player.value!.aplayer.index]["lrc"];
+          const sourceLrcResp = await fetch(originalLrcUrl);
+          const sourceLrcText = await sourceLrcResp.text();
+          const processedText = alignPilferedLyrics(pilferText, sourceLrcText);
+          if (processedText) {
+            const decoded = decodeDWQYRC(processedText, store.playerRMMetadata);
+            store.dwrcTemp = Array.isArray(decoded) ? (decoded as DWRCItem[]) : [];
+            store.dwrcLoading = false;
+            store.dwrcEnable = true;
+            console.log(`当前正在播放 ${songServer} 来源的《${store.getPlayerData.name}》- '${store.getPlayerData.artist}'，已成功从 ${currentServer} 偷到逐字歌词~`);
+            return;
+          } else {
+            store.dwrcTemp = [];
+            store.dwrcLoading = false;
+            store.dwrcEnable = false;
+          };
+        } else {
+          store.dwrcTemp = [];
+          store.dwrcLoading = false;
+          store.dwrcEnable = false;
+        };
+      } else {
+        store.dwrcTemp = [];
+        store.dwrcLoading = false;
+        store.dwrcEnable = false;
+      };
+    } catch (e) {
+      store.dwrcTemp = [];
+      store.dwrcLoading = false;
+      store.dwrcEnable = false;
+    }
+  } else {
+    store.dwrcTemp = [];
+    store.dwrcLoading = false;
+    store.dwrcEnable = false;
+  };
+  store.dwrcTemp = [];
+  store.dwrcLoading = false;
+  store.dwrcEnable = false;
 };
 
 function onLoadStart() {
@@ -493,6 +609,7 @@ function syncDWRCLrc() {
     };
     const isLineByLine = !store.dwrcEnable || store.dwrcTemp.length === 0 || store.dwrcLoading;
     const now = player.value.audioStatus.playedTime * 1000;
+    const lineSwitchNow = now + 200; // 提前 100ms 用于行切换
     if (isLineByLine) {
       const lyrics = player.value.aplayer.lyrics[playIndex.value];
       const playerLyricIndex = player.value.aplayer.lyricIndex;
@@ -504,7 +621,6 @@ function syncDWRCLrc() {
       } else {
         let lrc = lyrics[playerLyricIndex][1];
         if (lrc === "Loading") lrc = "歌词加载中...";
-        else if (lrc === "Not available" || lrc === "Not availible") lrc = "歌词加载失败";
         if (store.playerLrc.length !== 1 || store.playerLrc[0][4] !== lrc || store.playerLrc[0][2] !== playerLyricIndex) {
           store.setPlayerLrc([[true, 1, playerLyricIndex, 0, lrc]]);
         };
@@ -514,7 +630,8 @@ function syncDWRCLrc() {
       if (nowLineIndex.value === -1) {
         let foundIndex = -1;
         for (let i = 0; i < dwrc.length; i++) {
-          if (dwrc[i][0] <= now) {
+          if (dwrc[i][0] <= lineSwitchNow) {
+            // now -> lineSwitchNow
             foundIndex = i;
           } else {
             break;
@@ -522,22 +639,26 @@ function syncDWRCLrc() {
         };
         nowLineIndex.value = foundIndex;
       } else {
-        if (nowLineIndex.value + 1 < dwrc.length && now >= dwrc[nowLineIndex.value + 1][0]) {
+        if (nowLineIndex.value + 1 < dwrc.length && lineSwitchNow >= dwrc
+        [nowLineIndex.value + 1][0]) {
+          // now -> lineSwitchNow
           nowLineIndex.value++;
         };
       };
       const currentLine = nowLineIndex.value !== -1 ? dwrc[nowLineIndex.value] : null;
       let dwrcLyric: any[];
       if (currentLine) {
+        const fadeOutDuration = 300;
         dwrcLyric = currentLine[2].map((it: any) => {
           const [[start, duration], word, line, row] = it;
-          const isCurrent = now >= start && now <= start + duration;
-          const isSungLyrics = start + duration < now;
+          const isDuringFadeOut = now > start + duration && now <= start + duration + fadeOutDuration;
+          const isCurrent = (now >= start && now <= start + duration) || isDuringFadeOut;
+          const isSungLyrics = start + duration < now && !isDuringFadeOut;
           const lessdur = start + duration - now;
           return [isCurrent, isSungLyrics, line, row, word, duration, lessdur, "auto"];
         });
       } else {
-        dwrcLyric = [[true, 1, 0, 0, `${store.getPlayerData.name || 'Loading...'} - ${store.getPlayerData.artist || 'imsyy'}`]];
+        dwrcLyric = [[true, 1, 0, 0, `${store.getPlayerData.name || 'Loading...'} - ${store.getPlayerData.artist || 'NanoRocky'}`]];
       };
       store.setPlayerLrc(dwrcLyric);
     };

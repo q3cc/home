@@ -1,6 +1,6 @@
 // import axios from "axios";
 import fetchJsonp from "fetch-jsonp";
-import { gwg } from "@/utils/authServer";
+import { gwg, gwgt } from "@/utils/authServer";
 
 const REQUEST_TIMEOUT = 8000;
 const JSONP_TIMEOUT = 8000;
@@ -88,15 +88,17 @@ const loadJSONP = (
  */
 
 // 获取音乐播放列表
-export const getPlayerList = async (server, type, id, serverse, idse) => {
+export const getPlayerList = async (server, type, id, serverse, idse, playerTrLrc = false) => {
   const ensureArray = (data: any) => (Array.isArray(data) ? data : []);
   const normalizeSong = (item: any, overrideUrl?: string) => ({
     name: item.name || item.title,
     artist: item.artist || item.author,
-    album: item.album || import.meta.env.VITE_SITE_NAME,
+    album: item.album || envConfig.VITE_SITE_NAME,
     url: overrideUrl ?? item.url,
     cover: item.cover || item.pic,
-    lrc: item.lrc,
+    lrc: playerTrLrc && item.lrc
+      ? `${item.lrc}${item.lrc.includes("?") ? "&" : "?"}trlrc=true`
+      : item.lrc,
   });
   const safeFetchJson = async (url: string, label: string) => {
     try {
@@ -111,18 +113,18 @@ export const getPlayerList = async (server, type, id, serverse, idse) => {
   if (serverse != null && idse != null) {
     const [data1, data2] = await Promise.all([
       safeFetchJson(
-        `${import.meta.env.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
+        `${envConfig.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
         "音乐源 1",
       ),
       safeFetchJson(
-        `${import.meta.env.VITE_SONG_API}?server=${serverse}&type=${type}&id=${idse}`,
+        `${envConfig.VITE_SONG_API}?server=${serverse}&type=${type}&id=${idse}`,
         "音乐源 2",
       ),
     ]);
     dataf = [...data2, ...data1];
   } else {
     const data = await safeFetchJson(
-      `${import.meta.env.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
+      `${envConfig.VITE_SONG_API}?server=${server}&type=${type}&id=${id}`,
       "音乐源 1",
     );
     dataf = [...data];

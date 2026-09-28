@@ -50,9 +50,9 @@ const failWeather = (fileName = "天气加载失败.mp3"): never => {
 };
 
 // 加载密钥
-const txkey = import.meta.env.VITE_TX_WEATHER_KEY; // 腾讯天气密钥
-const txskey = import.meta.env.VITE_TX_WEATHER_SKEY; // 选择性对腾讯天气接口加密
-const gdkey = import.meta.env.VITE_GD_WEATHER_KEY; // 高德天气密钥
+const txkey = envConfig.VITE_TX_WEATHER_KEY; // 腾讯天气密钥
+const txskey = envConfig.VITE_TX_WEATHER_SKEY; // 选择性对腾讯天气接口加密
+const gdkey = envConfig.VITE_GD_WEATHER_KEY; // 高德天气密钥
 
 // 天气数据
 const weatherData = reactive<{

@@ -8,13 +8,15 @@ export const storeState: MainState = {
   innerWidth: null as number | null, // 【状态】当前窗口宽度
   coverType: 0 as number, // 【开关】壁纸种类（锁定为内置随机壁纸）
   sBGCount: null as string | null, // 【状态】使用内置壁纸时用于临时指定壁纸的接口
+  /* 0 不切换，1 等待 15 秒，2 等待 30 秒，3 等待 45 秒。 */
+  autoBGSwitchInterval : 2 as number, // 【开关】自动切换壁纸设置
   seasonalEffects: true, // 【开关】季节特效
   msgNameShow: false, // 【开关】信息区域显示自定义名而非原本的 URL
   siteStartShow: true, // 【开关】建站日期显示
   musicClick: true, // 【开关】音乐链接是否跳转
   musicBoxOpenState: false, // 【状态】音乐盒子开启状态
   musicIsOk: false, // 【状态】音乐是否加载完成
-  musicVolume: 0.7 as number, // 【开关】音乐音量
+  musicVolume: 0.3 as number, // 【开关】音乐音量
   musicOpenState: false, // 【状态】音乐面板开启状态
   backgroundShow: false, // 【状态】壁纸展示状态
   boxOpenState: false, // 【状态】盒子开启状态
@@ -36,10 +38,14 @@ export const storeState: MainState = {
   playerOrder: "random", // 【开关】循环顺序 "list", "random"
   webSpeech: false, // 【开关】网页语音交互总开关（包含播报歌名功能）
   playerSpeechName: true, // 【开关】播报歌名
+  playerTrLrc: false, // 【开关】逐行歌词调用翻译歌词开关
   playerDWRCShow: true, // 【开关】逐字歌词解析总开关
   playerDWRCShowPro: true, // 【开关】逐字效果增强开关
   playerDWRCATDB: true, // 【开关】允许接入 AMLL TTML Database
   playerDWRCATDBF: true, // 【开关】接入 AMLL TTML Database 时使用镜像加速
+  playerDWRCPilfer: true, // 【开关】拆东墙补西墙
+  /* 这个移除元数据功能暂只能对非直接从 API 获得的歌词有效，因为它不经由 APlayer 处理，可以被拦截并替换。所以也就只支持逐字。 */
+  playerRMMetadata: false, // 【开关】移除歌词中的元数据
   playerCurrentTime: null as number | null, // 【缓存】当前歌曲已播放时间
   playerDuration: null as number | null, // 【缓存】当前歌曲总时长
   dwrcIndex: -1 as number | null, // 【缓存】逐字歌词进度存储
@@ -156,10 +162,13 @@ export const mainStore = defineStore("main", {
         'playerOrder',
         'webSpeech',
         'playerSpeechName',
+        'playerTrLrc',
         'playerDWRCShow',
         'playerDWRCShowPro',
         'playerDWRCATDB',
         'playerDWRCATDBF',
+        'playerDWRCPilfer',
+        'playerRMMetadata',
         'seasonalEffects',
         'theme',
       ],

@@ -3,6 +3,7 @@ export interface MainState {
     innerWidth: number | null;
     coverType: number;
     sBGCount: string | null;
+    autoBGSwitchInterval : number;
     seasonalEffects: boolean;
     msgNameShow: boolean;
     siteStartShow: boolean;
@@ -31,10 +32,13 @@ export interface MainState {
     playerOrder: "list" | "random";
     webSpeech: boolean;
     playerSpeechName: boolean;
+    playerTrLrc: boolean;
     playerDWRCShow: boolean;
     playerDWRCShowPro: boolean;
     playerDWRCATDB: boolean;
     playerDWRCATDBF: boolean;
+    playerDWRCPilfer: boolean;
+    playerRMMetadata: boolean;
     playerCurrentTime: number | null;
     playerDuration: number | null;
     dwrcIndex: number | null;

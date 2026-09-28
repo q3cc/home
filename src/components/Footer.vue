@@ -81,6 +81,7 @@
                   i[0] && Number(i[6]) > 0 ? 'fade-in' : 'fade-in-start',
                   i[0] && Number(i[5]) > 1019 && Number(i[6]) > 0 ? 'long-tone' : 'fade-in-start',
                   i[0] && Number(i[6]) <= 0 ? 'fade-out' : '',
+                  i[0] && Number(i[5]) > 1019 && Number(i[6]) <= 0 ? 'long-tone-out' : '',
                   i[1] ? 'dwrc-style-s2' : 'dwrc-style-s1'
                 ]" :id="`lrc-char-${i[2]}-${i[3]}`" v-html="i[4]">
                 </span>
@@ -125,7 +126,7 @@ import { Paw } from "@vicons/ionicons5";
 import { mainStore } from "@/store";
 import config from "@/../package.json";
 import { ref, watch, computed, onMounted, nextTick, onUpdated, onBeforeUnmount } from "vue";
-import { throttle } from "lodash";
+import { throttle } from "lodash-es";
 
 const store = mainStore();
 const fullYear = new Date().getFullYear();
@@ -136,18 +137,18 @@ const audio = ref(null);
 const icon = ref(null);
 
 // 加载配置数据
-// const siteStartDate = ref(import.meta.env.VITE_SITE_START);
+// const siteStartDate = ref(envConfig.VITE_SITE_START);
 const startYear = ref<number | null>(
-  import.meta.env.VITE_SITE_START?.length >= 4 ?
-    parseInt(import.meta.env.VITE_SITE_START.substring(0, 4)) : null
+  envConfig.VITE_SITE_START?.length >= 4 ?
+    parseInt(envConfig.VITE_SITE_START.substring(0, 4)) : null
 );
 const ShowStartYear = computed(() => {
   return startYear.value !== null && startYear.value < fullYear;
 });
-const siteIcp = ref(import.meta.env.VITE_SITE_ICP);
-const siteMps = ref(import.meta.env.VITE_SITE_MPS);
-const siteMICP = ref(import.meta.env.VITE_SITE_MICP);
-const siteAuthor = ref(import.meta.env.VITE_SITE_AUTHOR);
+const siteIcp = ref(envConfig.VITE_SITE_ICP);
+const siteMps = ref(envConfig.VITE_SITE_MPS);
+const siteMICP = ref(envConfig.VITE_SITE_MICP);
+const siteAuthor = ref(envConfig.VITE_SITE_AUTHOR);
 
 // 解析萌ICP备案号
 const parseMoicp = (moicp: string | null | undefined) => {
@@ -176,7 +177,7 @@ const moicpInfo = computed(() => {
 });
 
 const siteUrl = computed(() => {
-  const url = import.meta.env.VITE_SITE_URL;
+  const url = envConfig.VITE_SITE_URL;
   if (!url) return "https://www.imsyy.top/";
   let fullUrl = url;
   if (!/^https?:\/\//i.test(url)) {
@@ -200,15 +201,15 @@ const toggleForceIcon = () => {
   if (store.forceShowBarIcon) {
     if (store.webSpeech) {
       stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
+      const voice = envConfig.VITE_TTS_Voice;
+      const vstyle = envConfig.VITE_TTS_Style;
       SpeechLocal("启用进度图标常驻.mp3");
     };
   } else {
     if (store.webSpeech) {
       stopSpeech();
-      const voice = import.meta.env.VITE_TTS_Voice;
-      const vstyle = import.meta.env.VITE_TTS_Style;
+      const voice = envConfig.VITE_TTS_Voice;
+      const vstyle = envConfig.VITE_TTS_Style;
       SpeechLocal("禁用进度图标常驻.mp3");
     };
   };
@@ -302,7 +303,7 @@ watch(() => store.getPlayerLrc, (_new, _old) => {
 // 逐字模块1
 .dwrc-char {
   display: inline-block;
-  opacity: 0.6;
+  opacity: 1;
   -webkit-transform: translateY(1px);
   transform: translateY(1px);
   -webkit-background-clip: text;
@@ -311,7 +312,7 @@ watch(() => store.getPlayerLrc, (_new, _old) => {
   font-weight: 520;
   font-size: 1.05rem;
   transition:
-    opacity 0.3s linear,
+    // opacity 0.3s linear,
     color 0.5s linear,
     transform 0.3s linear;
 
@@ -338,9 +339,9 @@ watch(() => store.getPlayerLrc, (_new, _old) => {
   }
 
   &.fade-out {
-    opacity: 1;
-    -webkit-transform: translateY(-1px);
-    transform: translateY(-1px);
+    opacity: 1 !important;
+    -webkit-transform: translateY(1px);
+    transform: translateY(1px);
     text-shadow: 0px 0px 6px var(--footer-dwrc-shadow-first-color),
       0px 0px 2px rgba(176, 224, 230, 1),
       0px 0px 2px rgba(230, 230, 250, 1);
@@ -358,7 +359,19 @@ watch(() => store.getPlayerLrc, (_new, _old) => {
     opacity: 1;
     -webkit-transform: translateY(-1px);
     transform: translateY(-1px);
-    animation: pulse 1s ease-in-out forwards;
+    animation: pulse 1.2s ease-in-out forwards !important;
+    transition:
+      color 0.5s linear,
+      opacity 0.3s linear,
+      transform 0.3s linear;
+  }
+
+  &.long-tone-out {
+    opacity: 1 !important;
+    -webkit-transform: translateY(1px);
+    transform: translateY(1px);
+    animation: pulse-out 0.7s ease-in-out forwards !important;
+    animation-iteration-count: 1;
     transition:
       color 0.5s linear,
       opacity 0.3s linear,
@@ -444,6 +457,36 @@ watch(() => store.getPlayerLrc, (_new, _old) => {
       0px 0px 12px rgba(255, 192, 203, 1),
       0px 0px 16px rgba(255, 182, 193, 1),
       0px 0px 16px rgba(255, 192, 203, 1);
+  }
+}
+
+@keyframes pulse-out {
+  from {
+    color: var(--footer-dwrc-end-color);
+    opacity: 1;
+    text-shadow: 3px 3px 7px var(--footer-dwrc-shadow-first-color),
+      0px 0px 4px rgba(255, 182, 193, 0.3),
+      0px 0px 4px rgba(255, 192, 203, 0.3),
+      0px 0px 8px rgba(255, 182, 193, 0.3),
+      0px 0px 8px rgba(255, 192, 203, 0.3),
+      0px 0px 12px rgba(255, 182, 193, 1),
+      0px 0px 12px rgba(255, 192, 203, 1),
+      0px 0px 16px rgba(255, 182, 193, 1),
+      0px 0px 16px rgba(255, 192, 203, 1);
+  }
+
+  to {
+    color: var(--footer-dwrc-start-color);
+    opacity: 1;
+    text-shadow: 0px 0px 3px var(--footer-dwrc-shadow-first-color),
+      0px 0px 0px rgba(255, 182, 193, 0.3),
+      0px 0px 0px rgba(255, 192, 203, 0.3),
+      0px 0px 0px rgba(255, 182, 193, 0.3),
+      0px 0px 0px rgba(255, 192, 203, 0.3),
+      0px 0px 0px rgba(255, 182, 193, 1),
+      0px 0px 0px rgba(255, 192, 203, 1),
+      0px 0px 0px rgba(255, 182, 193, 1),
+      0px 0px 0px rgba(255, 192, 203, 1);
   }
 }
 

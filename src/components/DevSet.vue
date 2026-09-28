@@ -23,12 +23,23 @@
                         :inactive-icon="CloseSmall" />
                 </div>
             </el-collapse-item>
-            <el-collapse-item title="重置" name="4">
+            <el-collapse-item title="壁纸高级设置" name="4">
+                <div class="item">
+                    <span class="text">壁纸自动切换</span><br><br>
+                    <el-radio-group v-model="autoBGSwitchInterval" size="small" text-color="#FFFFFF">
+                        <el-radio :value="0" border>禁用</el-radio>
+                        <el-radio :value="1" border>15 秒</el-radio>
+                        <el-radio :value="2" border>30 秒</el-radio>
+                        <el-radio :value="3" border>45 秒</el-radio>
+                    </el-radio-group>
+                </div>
+            </el-collapse-item>
+            <el-collapse-item title="重置" name="5">
                 <div class="item">
                     <el-button plain class="el-button" @click="resetSettings()">重置所有设置</el-button>
                 </div>
             </el-collapse-item>
-            <el-collapse-item title="检查版本更新" name="5">
+            <el-collapse-item title="检查版本更新" name="6">
                 <div class="item">
                     <div class="upver">版本号 v{{ versionInfo.version }}，{{ versTypeT }}，{{ versionInfo.channel }} 渠道，by {{
                         versionInfo.upa }} 。
@@ -76,6 +87,8 @@ const {
     setV,
     theme,
     msgNameShow,
+    playerDWRCPilfer,
+    autoBGSwitchInterval
 } = storeToRefs(store);
 
 const versionInfo = parseVersion(config.version);
@@ -104,8 +117,8 @@ const checkUpdate = async () => {
         });
         if (store.webSpeech) {
             stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
+            const voice = envConfig.VITE_TTS_Voice;
+            const vstyle = envConfig.VITE_TTS_Style;
             SpeechLocal("检查更新-已是最新版本.mp3");
         };
     } else if (updinfo.status == 'false') {
@@ -115,8 +128,8 @@ const checkUpdate = async () => {
         });
         if (store.webSpeech) {
             stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
+            const voice = envConfig.VITE_TTS_Voice;
+            const vstyle = envConfig.VITE_TTS_Style;
             SpeechLocal("检查更新-发现新版本.mp3");
         };
     } else {
@@ -126,8 +139,8 @@ const checkUpdate = async () => {
         });
         if (store.webSpeech) {
             stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
+            const voice = envConfig.VITE_TTS_Voice;
+            const vstyle = envConfig.VITE_TTS_Style;
             SpeechLocal("检查更新-检测异常.mp3");
         };
     };
@@ -156,8 +169,8 @@ const resetSettings = () => {
         });
         if (store.webSpeech) {
             stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
+            const voice = envConfig.VITE_TTS_Voice;
+            const vstyle = envConfig.VITE_TTS_Style;
             SpeechLocal("重置2.mp3");
         };
         store.resetStore();
@@ -168,8 +181,8 @@ const resetSettings = () => {
         });
         if (store.webSpeech) {
             stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
+            const voice = envConfig.VITE_TTS_Voice;
+            const vstyle = envConfig.VITE_TTS_Style;
             SpeechLocal("重置3.mp3");
         };
     } else {
@@ -179,8 +192,8 @@ const resetSettings = () => {
         });
         if (store.webSpeech) {
             stopSpeech();
-            const voice = import.meta.env.VITE_TTS_Voice;
-            const vstyle = import.meta.env.VITE_TTS_Style;
+            const voice = envConfig.VITE_TTS_Voice;
+            const vstyle = envConfig.VITE_TTS_Style;
             SpeechLocal("重置1.mp3");
         };
     };

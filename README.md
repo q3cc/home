@@ -11,24 +11,8 @@
 <p>&nbsp;<p>
 
 > [!WARNING]
-> ## 关于 PWA 缓存的问题
-> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;·&nbsp;由于 PWA 依赖的 Workbox 组件已经<b>长达 1 年</b>没有发布新 Release ，导致 Workbox 仍在使用已经被弃用的 glob 版本 7.2.3 。这个问题造成项目在运行时提示包含弃用的依赖。 <p>
-> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;·&nbsp;<b>So Google , fuck you !</b><p>
-> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;·&nbsp;目前项目放弃对 PWA 缓存的支持，强制将 glob 覆盖到高版本。故编译时会得到错误 ：<p>
-> ```bash
-> PWA v1.0.3
->mode      generateSW
->precache  8 entries (0.00 KiB)
->files generated
->  dist/sw.js
->  dist/workbox-4523edd1.js
->warnings
->  An error occurred when globbing for files. 'Cannot read properties of undefined (reading 'sync')'
->
->✓ built in 13.21s
-> ```
-> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;·&nbsp;但除了缓存外并不会导致项目出现其它异常。如果需要启用这个功能，请删除 `package.json` 内`overrides`中的`"glob": "^11.0.3"`，然后重新执行`pnpm install`。此功能应该会恢复正常，<p>
->### So Google , fuck you !
+> ## hmm...
+> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;下一个版本原计划是添加 i18n ，由于工作量巨大且...某个笨蛋最近迷上了 洛克王国 ，故这个更新可能会遥遥无期(x)... 等腾点时间出来叭（<p>
 
 <p>&nbsp;<p>
 <strong><h2>無名の主页</h2></strong>
@@ -79,8 +63,8 @@ injectRegister: false,
 
 - **安装** [node.js](https://nodejs.org/zh-cn/) **环境**
 
-  > node > 22.17.0 <p>
-  > npm > 10.9.2
+  > node > 24.13.0 <p>
+  > npm > 10.15.0
 
 - 然后以 **管理员权限** 运行 `PowerShell` 终端，并 `cd` 到 项目根目录
 - 在 `终端` 中输入：
@@ -174,7 +158,11 @@ const siteIcon = {
 - 前往 [腾讯位置服务](https://lbs.qq.com/) 或 [高德开放平台控制台](https://console.amap.com/dev/index) 创建一个 `Web 服务` 类型的 `Key`，并将 `Key` 填入 `.env` 中对应参数中。
 - 注：高德开放平台的 FREE IP定位接口不支持 IPV6，如果遇到高德接口异常，请检查网络环境是否有 IPV6，系统是否使用 IPV6 优先。你也可以在浏览器开发者选项中看到“远程地址”是否为 IPV6 地址。腾讯接口同时支持 IPV4 和 IPV6。
 
-也可自行更换其他方式
+也可自行更换其他方式。
+
+>[!WARNING]
+>强烈建议自行注册天气 Token ，它们是免费且稳定的！<p>
+>内置了三个免费接口，目前仅剩 小米天气 可正常工作。由于这些非公开接口没有 CORS 不允许跨域，必须使用中转。并且拥有较高的速率限制，所以经常失效。如果您希望使用这个接口，记得捐赠酪灰，帮助其承担服务器费用！<p>
 
 ### 音乐
 
@@ -197,6 +185,10 @@ VITE_SONG_ID_SECOND = "9518088898"
 ```
 >目前已支持设置两个歌单进行合并，如不需要，留空即可。<p>
 >如果需要使用网易云音乐逐字歌词，请使用 [修改版 Meting-Api](https://github.com/NanoRocky/meting-api/) ！<p>
+
+>[!WARNING]
+>这里提供的 api 有较高的速率限制，且不太稳定，强烈建议自行搭建 Meting-API！你也可以赞助酪灰帮助他承担服务费用！阿里嘎多！<p>
+>注意：提供的 api 可能出现Q音接口抛 401 的情况，并非服务异常，Q音接口需要将项目编译后挂到正常域名并使用 https only，使用正常 443 端口，才能正常工作。<p>
 
 ### 字体
 
