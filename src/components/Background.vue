@@ -107,13 +107,13 @@ const getLocalBgUrl = (deviceType, index) => {
 const getRandomBgUrl = async (deviceType) => {
   const endpoint = deviceType === 'mobile' ? 'pe' : 'pc';
   const response = await fetch(
-    `https://www.loliapi.com/acg/${endpoint}/?type=json&t=${Date.now()}-${Math.random()}`,
+    `https://api.yppp.net/${endpoint}.php?return=json&t=${Date.now()}-${Math.random()}`,
     { cache: 'no-store', signal: AbortSignal.timeout(5000) },
   );
   if (!response.ok) throw new Error(`随机壁纸请求失败: ${response.status}`);
   const data = await response.json();
-  const url = data.url || data.imgurl;
-  if (!url || !/^https:\/\//i.test(url)) throw new Error('随机壁纸地址无效');
+  const url = data.acgurl;
+  if (Number(data.code) !== 200 || !url || !/^https:\/\//i.test(url)) throw new Error('随机壁纸地址无效');
   return url;
 };
 
@@ -153,9 +153,9 @@ const changeBg = async (type) => {
   try {
     if (type !== LOCKED_COVER_TYPE) lockWallpaperSettings();
     const deviceType = detectDeviceType();
-    const remoteDeadline = Date.now() + 14000;
+    const remoteDeadline = Date.now() + 12000;
     if (deviceType === 'mobile' && await tryRandomBackground('mobile', 2, remoteDeadline)) return;
-    if (await tryRandomBackground('pc', 8, remoteDeadline)) return;
+    if (await tryRandomBackground('pc', 3, remoteDeadline)) return;
     if (currentBgUrl.value) return;
 
     await loadConfig();
