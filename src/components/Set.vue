@@ -3,7 +3,7 @@
     <el-collapse class="collapse" v-model="activeName" accordion>
       <el-collapse-item title="个性壁纸" name="1">
         <div class="bg-set">
-          <span class="bg-lock-tip">当前仅保留随机内置壁纸，已禁止切换。可在背景页点击“保存当前壁纸”。</span>
+          <span class="bg-lock-tip">壁纸会自动随机切换，加载失败时使用备用壁纸。可在背景页保存当前壁纸。</span>
         </div>
       </el-collapse-item>
       <el-collapse-item title="主题设置" name="2">

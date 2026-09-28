@@ -13,7 +13,7 @@
             </el-collapse-item>
             <el-collapse-item title="壁纸调整" name="2">
                 <div class="item">
-                    <div class="upver">随机内置壁纸已锁定，开发模式下也不支持临时指定壁纸。</div>
+                    <div class="upver">壁纸来源已固定，无法指定某一张壁纸。</div>
                 </div>
             </el-collapse-item>
             <el-collapse-item title="个性化设置" name="3">

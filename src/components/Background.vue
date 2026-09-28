@@ -1,10 +1,10 @@
 <template>
   <div :class="store.backgroundShow ? 'cover show' : 'cover'">
     <!-- 当前壁纸层 -->
-    <img v-show="store.imgLoadStatus" :src="currentBgUrl" :class="['bg', 'current', { 'blur-out': isTransitioning, 'no-transition': skipTransition }]"
-      alt="cover" @load="imgLoadComplete" @error.once="imgLoadError" @animationend="imgAnimationEnd" />
+    <img v-show="store.imgLoadStatus" :src="currentBgUrl" crossorigin="anonymous" :class="['bg', 'current', { 'blur-out': isTransitioning, 'no-transition': skipTransition }]"
+      alt="cover" @load="imgLoadComplete" @error="imgLoadError" @animationend="imgAnimationEnd" />
     <!-- 新壁纸层 -->
-    <img v-if="isTransitioning" :src="nextBgUrl" :class="['bg', 'next', { 'blur-in': isBlurringIn }]" alt="cover" />
+    <img v-if="isTransitioning" :src="nextBgUrl" crossorigin="anonymous" :class="['bg', 'next', { 'blur-in': isBlurringIn }]" alt="cover" />
     <div :class="store.backgroundShow ? 'gray o-hidden' : 'gray'" />
     <Transition name="fade" mode="out-in">
       <a v-if="store.backgroundShow && currentBgUrl" class="down" :href="currentBgUrl" target="_blank" rel="noopener noreferrer">
@@ -16,12 +16,11 @@
 
 <script setup lang="js">
 import { mainStore } from "@/store";
-import { Error } from "@icon-park/vue-next";
-import { Speech, stopSpeech, SpeechLocal } from "@/utils/speech";
+import { stopSpeech, SpeechLocal } from "@/utils/speech";
 import { initSnowfall, closeSnowfall } from "@/utils/season/snow";
 import { initFirefly, closeFirefly } from "@/utils/season/firefly";
 import { initLantern, closeLantern } from "@/utils/season/lantern";
-import { ref, h, nextTick } from 'vue';
+import { ref, nextTick } from 'vue';
 import { gasC } from "@/utils/authServer";
 import { detectDeviceType } from "@/utils/device";
 
@@ -55,12 +54,14 @@ lockWallpaperSettings();
 // 设置一个默认值，防止在无法加载 JSON 文件时壁纸失效。应该尽量保证壁纸数始终不小于这个默认值
 let bgImageCount = 10; // PC 版壁纸
 let bgImageCountP = 2; // 移动版壁纸
-let bgRandom = 0;
-let bgRandomp = 0;
 let sest = 0;
-let sBGCountN = null;
 let configCache = null;
 let configPromise = null;
+let lastWallpaperId = null;
+
+const assetUrl = async (path) => key
+  ? gasC(new URL(path, window.location.origin).href, key)
+  : path;
 
 // 加载 config.json
 async function loadConfig() {
@@ -72,12 +73,13 @@ async function loadConfig() {
   if (!configPromise) {
     configPromise = (async () => {
       const confUrl = "/images/config.json";
-      const configUrl = key ? await gasC(confUrl, key) : confUrl;
-      const response = await fetch(configUrl);
+      const configUrl = await assetUrl(confUrl);
+      const response = await fetch(configUrl, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error(`壁纸配置请求失败: ${response.status}`);
       const data = await response.json();
       return {
-        bgImageCount: Math.max(data.bgImageCount, 1),
-        bgImageCountP: Math.max(data.bgImageCountP, 1),
+        bgImageCount: Number.isInteger(data.bgImageCount) && data.bgImageCount > 0 ? data.bgImageCount : bgImageCount,
+        bgImageCountP: Number.isInteger(data.bgImageCountP) && data.bgImageCountP > 0 ? data.bgImageCountP : bgImageCountP,
       };
     })();
   }
@@ -86,54 +88,62 @@ async function loadConfig() {
     configCache = data;
     bgImageCount = data.bgImageCount;
     bgImageCountP = data.bgImageCountP;
-    if (sBGCountN != null && sBGCountN <= bgImageCount && sBGCountN > 0) {
-      bgRandom = sBGCountN;
-      bgRandomp = sBGCountN;
-      sBGCountN = null;
-      return true;
-    } else {
-      bgRandom = Math.floor(Math.random() * bgImageCount + 1);
-      bgRandomp = Math.floor(Math.random() * bgImageCountP + 1);
-      sBGCountN = null;
-      return true;
-    };
+    return true;
   } catch (error) {
     console.error('无法加载壁纸配置文件:', error);
-    bgRandom = Math.floor(Math.random() * bgImageCount + 1);
-    bgRandomp = Math.floor(Math.random() * bgImageCountP + 1);
-    sBGCountN = null;
     return true;
   } finally {
     configPromise = null;
   };
 };
 
-const getLocalBgUrl = async (deviceType) => {
-  // 这里指定了所有自定义背景的文件格式，必须统一。可以自定义修改，比如 webp 或 png
-  // 酪灰的小批注：这里添加了设备类型识别以加载不同分辨率的壁纸
-  // 如果不需要区分设备类型，则只需要保留这一行 bgUrl.value = `/images/background${bgRandom}.jpg`;
-  if (deviceType === 'mobile') {
-    if (key) {
-      const bgUrlS = `/images/phone/backgroundphone${bgRandomp}.jpg`;
-      return await gasC(bgUrlS, key);
-    } else {
-      return `/images/phone/backgroundphone${bgRandomp}.jpg`;
-    };
-  } else if (deviceType === 'tablet' || deviceType === 'pc') {
-    if (key) {
-      const bgUrlS = `/images/background${bgRandom}.jpg`;
-      return await gasC(bgUrlS, key);
-    } else {
-      return `/images/background${bgRandom}.jpg`;
-    };
-  } else {
-    if (key) {
-      const bgUrlS = `/images/background${bgRandom}.jpg`;
-      return await gasC(bgUrlS, key);
-    } else {
-      return `/images/background${bgRandom}.jpg`;
-    };
-  };
+const getLocalBgUrl = (deviceType, index) => {
+  const path = deviceType === 'mobile'
+    ? `/images/phone/backgroundphone${index}.jpg`
+    : `/images/background${index}.jpg`;
+  return assetUrl(path);
+};
+
+const getRandomBgUrl = async (deviceType) => {
+  const endpoint = deviceType === 'mobile' ? 'pe' : 'pc';
+  const response = await fetch(
+    `https://www.loliapi.com/acg/${endpoint}/?type=json&t=${Date.now()}-${Math.random()}`,
+    { cache: 'no-store', signal: AbortSignal.timeout(5000) },
+  );
+  if (!response.ok) throw new Error(`随机壁纸请求失败: ${response.status}`);
+  const data = await response.json();
+  const url = data.url || data.imgurl;
+  if (!url || !/^https:\/\//i.test(url)) throw new Error('随机壁纸地址无效');
+  return url;
+};
+
+const tryRandomBackground = async (deviceType, attempts, deadline) => {
+  for (let attempt = 0; attempt < attempts && Date.now() < deadline; attempt++) {
+    try {
+      const remoteUrl = await getRandomBgUrl(deviceType);
+      if (await preloadImage(remoteUrl, Math.min(3500, deadline - Date.now()))) {
+        await performTransition(remoteUrl);
+        return true;
+      }
+      console.error('随机壁纸图片加载失败：', remoteUrl);
+    } catch (error) {
+      console.error('随机壁纸请求失败：', error);
+    }
+  }
+  return false;
+};
+
+const shuffledWallpaperIds = (deviceType) => {
+  const count = deviceType === 'mobile' ? bgImageCountP : bgImageCount;
+  const ids = Array.from({ length: count }, (_, index) => index + 1);
+  for (let index = ids.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
+  }
+  if (ids.length > 1 && lastWallpaperId?.deviceType === deviceType && ids[0] === lastWallpaperId.index) {
+    [ids[0], ids[1]] = [ids[1], ids[0]];
+  }
+  return ids;
 };
 
 // 更换壁纸链接
@@ -141,32 +151,56 @@ const changeBg = async (type) => {
   if (isLoading.value) return;
   isLoading.value = true;
   try {
-    const configLoaded = await loadConfig();
-    if (!configLoaded) return;
     if (type !== LOCKED_COVER_TYPE) lockWallpaperSettings();
-    const newBgUrl = await getLocalBgUrl(detectDeviceType());
-    const result = await preloadImage(newBgUrl);
-    if (!result.ok) {
-      console.error("壁纸加载失败：", newBgUrl);
-      ElMessage.error("壁纸加载失败");
+    const deviceType = detectDeviceType();
+    const remoteDeadline = Date.now() + 14000;
+    if (deviceType === 'mobile' && await tryRandomBackground('mobile', 2, remoteDeadline)) return;
+    if (await tryRandomBackground('pc', 8, remoteDeadline)) return;
+    if (currentBgUrl.value) return;
+
+    await loadConfig();
+    const devices = deviceType === 'mobile' ? ['mobile', 'pc'] : ['pc'];
+    const deadline = Date.now() + 15000;
+    for (const candidateDevice of devices) {
+      for (const index of shuffledWallpaperIds(candidateDevice)) {
+        if (Date.now() >= deadline) break;
+        const newBgUrl = await getLocalBgUrl(candidateDevice, index);
+        if (await preloadImage(newBgUrl, Math.min(5000, deadline - Date.now()))) {
+          lastWallpaperId = { deviceType: candidateDevice, index };
+          await performTransition(newBgUrl);
+          return;
+        }
+        console.error("壁纸加载失败：", newBgUrl);
+      }
     }
+    if (!currentBgUrl.value) store.setImgLoadStatus(true);
+    ElMessage.error("壁纸暂时无法加载，请稍后刷新页面");
+  } catch (error) {
+    console.error("壁纸加载失败：", error);
+    if (!currentBgUrl.value) store.setImgLoadStatus(true);
+    ElMessage.error("壁纸暂时无法加载，请稍后刷新页面");
   } finally {
     isLoading.value = false;
   }
 };
 
-// 预加载图片并执行过渡动画
-const preloadImage = (url) => {
+// 预加载成功后才展示壁纸，避免首屏一直停在加载状态
+const preloadImage = (url, timeout) => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => {
-      // 图片加载完成后,执行过渡动画
-      performTransition(url);
-      resolve({ ok: true });
+    img.crossOrigin = 'anonymous';
+    let finished = false;
+    const timer = setTimeout(() => finish(false), timeout);
+    const finish = (loaded) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      img.onload = null;
+      img.onerror = null;
+      resolve(loaded);
     };
-    img.onerror = () => {
-      resolve({ ok: false });
-    };
+    img.onload = () => finish(true);
+    img.onerror = () => finish(false);
     img.src = url;
   });
 };
@@ -229,23 +263,10 @@ const imgAnimationEnd = () => {
 // 图片显示失败
 const imgLoadError = async () => {
   console.error("壁纸加载失败");
-  ElMessage({
-    message: "壁纸加载失败，已临时切换回默认",
-    icon: h(Error, {
-      theme: "filled",
-      fill: "var(--el-message-icon-color)",
-    }),
-  });
-  if (key) {
-    const bgUrlS = `/images/background${bgRandom}.jpg`;
-    currentBgUrl.value = await gasC(bgUrlS, key);
-  } else {
-    currentBgUrl.value = `/images/background${bgRandom}.jpg`;
-  };
+  currentBgUrl.value = null;
+  await changeBg(LOCKED_COVER_TYPE);
   if (store.webSpeech) {
     stopSpeech();
-    const voice = envConfig.VITE_TTS_Voice;
-    const vstyle = envConfig.VITE_TTS_Style;
     SpeechLocal("壁纸加载失败.mp3");
   };
 };
@@ -345,9 +366,6 @@ const setupAutoSwitch = () => {
 
   const switchBackground = async () => {
     if (isLoading.value) return;
-    bgRandom = Math.floor(Math.random() * bgImageCount + 1);
-    bgRandomp = Math.floor(Math.random() * bgImageCountP + 1);
-    sBGCountN = null;
     await changeBg(Number(store.coverType));
   };
 
@@ -388,7 +406,6 @@ watch(() => store.seasonalEffects, async (value) => {
 
 watch(() => store.sBGCount, async (value) => {
   if (value == null || value == 0) return;
-  sBGCountN = null;
   store.setSBGCount(null);
 });
 
