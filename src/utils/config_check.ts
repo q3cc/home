@@ -40,12 +40,13 @@ export const envConfig: Env = {
         ? import.meta.env.VITE_GD_WEATHER_KEY || exampleConfig.VITE_GD_WEATHER_KEY : exampleConfig.VITE_GD_WEATHER_KEY,
     VITE_SITE_START: import.meta.env.VITE_CONFIG_TURN == 'true'
         ? import.meta.env.VITE_SITE_START || exampleConfig.VITE_SITE_START : exampleConfig.VITE_SITE_START,
+    // 备案信息只使用站点配置，未填写时不展示示例站点的备案号。
     VITE_SITE_ICP: import.meta.env.VITE_CONFIG_TURN == 'true'
-        ? import.meta.env.VITE_SITE_ICP || exampleConfig.VITE_SITE_ICP : exampleConfig.VITE_SITE_ICP,
+        ? import.meta.env.VITE_SITE_ICP ?? '' : '',
     VITE_SITE_MPS: import.meta.env.VITE_CONFIG_TURN == 'true'
-        ? import.meta.env.VITE_SITE_MPS || exampleConfig.VITE_SITE_MPS : exampleConfig.VITE_SITE_MPS,
+        ? import.meta.env.VITE_SITE_MPS ?? '' : '',
     VITE_SITE_MICP: import.meta.env.VITE_CONFIG_TURN == 'true'
-        ? import.meta.env.VITE_SITE_MICP || exampleConfig.VITE_SITE_MICP : exampleConfig.VITE_SITE_MICP,
+        ? import.meta.env.VITE_SITE_MICP ?? '' : '',
     VITE_SONG_API: import.meta.env.VITE_CONFIG_TURN == 'true'
         ? import.meta.env.VITE_SONG_API || exampleConfig.VITE_SONG_API : exampleConfig.VITE_SONG_API,
     VITE_SONG_SERVER: (import.meta.env.VITE_CONFIG_TURN == 'true'
